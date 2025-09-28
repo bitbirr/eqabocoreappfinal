@@ -1,0 +1,775 @@
+{
+	"info": {
+		"_postman_id": "hotel-booking-workflow-2024",
+		"name": "🏨 Hotel Booking Complete Workflow",
+		"description": "# 🏨 Complete Hotel Booking Workflow\n\nThis collection demonstrates the complete end-to-end hotel booking process:\n\n## 🔄 Workflow Steps:\n1. **🔐 Authentication** - Register/Login to get JWT token\n2. **🔍 Hotel Search** - Search hotels by city\n3. **🏠 Room Availability** - Check room availability for dates\n4. **📝 Create Booking** - Make a reservation\n5. **💳 Payment Initiation** - Start payment process\n6. **✅ Payment Callback** - Simulate payment completion\n7. **🧾 Booking Receipt** - Get final confirmation\n\n## 🚀 Quick Start:\n1. Select the **Hotel Booking Workflow Environment**\n2. Run requests **in sequence** (1→2→3→4→5→6→7)\n3. Each step automatically passes data to the next\n4. JWT tokens and IDs are managed automatically\n\n## 📋 Environment Variables:\n- `base_url` - API base URL\n- `jwt_token` - Authentication token (auto-managed)\n- `user_id` - Current user ID (auto-set)\n- `selected_hotel_id` - Chosen hotel (auto-set from search)\n- `selected_room_id` - Chosen room (auto-set from availability)\n- `booking_id` - Created booking ID (auto-set)\n- `payment_id` - Payment ID (auto-set)\n- `transaction_reference` - Payment reference (auto-set)\n\n## 🎯 Test Data:\n- **City**: Addis Ababa\n- **Dates**: 2025-10-01 to 2025-10-03\n- **Guest**: Abebe Kebede\n- **Email**: abebe.kebede@example.com\n- **Phone**: +251911123456\n\n---\n**💡 Tip**: Run each request in order for the complete workflow experience!",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1️⃣ Authentication",
+			"item": [
+				{
+					"name": "🔐 Register & Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Registration/Login successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Response contains JWT token', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"});",
+									"",
+									"pm.test('✅ Response contains user data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"    pm.expect(jsonData.user).to.have.property('id');",
+									"    pm.expect(jsonData.user).to.have.property('email');",
+									"});",
+									"",
+									"// Store authentication data for next steps",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // Store JWT token",
+									"    pm.environment.set('jwt_token', responseJson.token);",
+									"    ",
+									"    // Store user ID",
+									"    pm.environment.set('user_id', responseJson.user.id);",
+									"    ",
+									"    console.log('🔐 Authentication successful!');",
+									"    console.log('👤 User ID:', responseJson.user.id);",
+									"    console.log('📧 Email:', responseJson.user.email);",
+									"    console.log('🎫 JWT Token stored for next requests');",
+									"    console.log('');",
+									"    console.log('➡️ Next Step: Search for hotels in your city');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Abebe\",\n  \"last_name\": \"Kebede\",\n  \"phone\": \"+251911123456\",\n  \"password\": \"SecurePassword123!\",\n  \"role\": \"hotel_owner\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "**Step 1: Authentication**\n\nRegisters a new user and automatically stores the JWT token for subsequent requests.\n\n**What happens:**\n- Creates a new user account\n- Returns JWT authentication token\n- Stores token and user ID in environment variables\n\n**Next Step:** Search for hotels"
+					}
+				}
+			],
+			"description": "🔐 **Authentication Step**\n\nFirst step in the booking workflow - authenticate the user and get JWT token for protected endpoints."
+		},
+		{
+			"name": "2️⃣ Hotel Search",
+			"item": [
+				{
+					"name": "🔍 Search Hotels by City",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have authentication token",
+									"const token = pm.environment.get('jwt_token');",
+									"if (!token) {",
+									"    console.error('❌ No JWT token found! Please run Step 1 (Authentication) first.');",
+									"    throw new Error('Authentication required - run Step 1 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Hotel search successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Hotels found in response', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('hotels');",
+									"    pm.expect(jsonData.hotels).to.be.an('array');",
+									"    pm.expect(jsonData.hotels.length).to.be.greaterThan(0);",
+									"});",
+									"",
+									"pm.test('✅ Hotel data structure is valid', function () {",
+									"    const jsonData = pm.response.json();",
+									"    const firstHotel = jsonData.hotels[0];",
+									"    pm.expect(firstHotel).to.have.property('id');",
+									"    pm.expect(firstHotel).to.have.property('name');",
+									"    pm.expect(firstHotel).to.have.property('city');",
+									"});",
+									"",
+									"// Auto-select first hotel for next step",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.hotels && responseJson.hotels.length > 0) {",
+									"        const selectedHotel = responseJson.hotels[0];",
+									"        ",
+									"        // Store selected hotel ID",
+									"        pm.environment.set('selected_hotel_id', selectedHotel.id);",
+									"        ",
+									"        console.log('🔍 Hotel search completed!');",
+									"        console.log('🏨 Found', responseJson.hotels.length, 'hotels in Addis Ababa');",
+									"        console.log('✅ Auto-selected hotel:', selectedHotel.name);",
+									"        console.log('🆔 Hotel ID:', selectedHotel.id);",
+									"        console.log('📍 Location:', selectedHotel.address);",
+									"        console.log('');",
+									"        console.log('➡️ Next Step: Check room availability for your dates');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hotels/search?city=Addis Ababa&limit=10&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"search"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Addis Ababa",
+									"description": "City to search hotels in"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of results to return"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Number of results to skip"
+								}
+							]
+						},
+						"description": "**Step 2: Hotel Search**\n\nSearches for available hotels in the specified city.\n\n**What happens:**\n- Searches hotels in Addis Ababa\n- Returns list of available hotels\n- Automatically selects the first hotel for next step\n- Stores selected hotel ID in environment\n\n**Next Step:** Check room availability"
+					}
+				}
+			],
+			"description": "🔍 **Hotel Search Step**\n\nSecond step - search for hotels in the desired city and auto-select one for the booking process."
+		},
+		{
+			"name": "3️⃣ Room Availability",
+			"item": [
+				{
+					"name": "🏠 Check Room Availability",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have required data from previous steps",
+									"const token = pm.environment.get('jwt_token');",
+									"const hotelId = pm.environment.get('selected_hotel_id');",
+									"",
+									"if (!token) {",
+									"    console.error('❌ No JWT token found! Please run Step 1 (Authentication) first.');",
+									"    throw new Error('Authentication required - run Step 1 first');",
+									"}",
+									"",
+									"if (!hotelId) {",
+									"    console.error('❌ No hotel selected! Please run Step 2 (Hotel Search) first.');",
+									"    throw new Error('Hotel selection required - run Step 2 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Room availability check successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Available rooms found', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('available_rooms');",
+									"    pm.expect(jsonData.available_rooms).to.be.an('array');",
+									"    pm.expect(jsonData.available_rooms.length).to.be.greaterThan(0);",
+									"});",
+									"",
+									"pm.test('✅ Room data structure is valid', function () {",
+									"    const jsonData = pm.response.json();",
+									"    const firstRoom = jsonData.available_rooms[0];",
+									"    pm.expect(firstRoom).to.have.property('id');",
+									"    pm.expect(firstRoom).to.have.property('room_type');",
+									"    pm.expect(firstRoom).to.have.property('price_per_night');",
+									"});",
+									"",
+									"// Auto-select first available room",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.available_rooms && responseJson.available_rooms.length > 0) {",
+									"        const selectedRoom = responseJson.available_rooms[0];",
+									"        ",
+									"        // Store selected room ID",
+									"        pm.environment.set('selected_room_id', selectedRoom.id);",
+									"        ",
+									"        // Calculate total price (2 nights)",
+									"        const nights = 2;",
+									"        const totalPrice = selectedRoom.price_per_night * nights;",
+									"        pm.environment.set('total_booking_price', totalPrice);",
+									"        ",
+									"        console.log('🏠 Room availability checked!');",
+									"        console.log('✅ Found', responseJson.available_rooms.length, 'available rooms');",
+									"        console.log('🛏️ Auto-selected room:', selectedRoom.room_type);",
+									"        console.log('🆔 Room ID:', selectedRoom.id);",
+									"        console.log('💰 Price per night: ETB', selectedRoom.price_per_night);",
+									"        console.log('🧮 Total for 2 nights: ETB', totalPrice);",
+									"        console.log('');",
+									"        console.log('➡️ Next Step: Create your booking');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hotels/{{selected_hotel_id}}/availability?checkin=2025-10-01&checkout=2025-10-03",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"{{selected_hotel_id}}",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "checkin",
+									"value": "2025-10-01",
+									"description": "Check-in date (YYYY-MM-DD)"
+								},
+								{
+									"key": "checkout",
+									"value": "2025-10-03",
+									"description": "Check-out date (YYYY-MM-DD)"
+								}
+							]
+						},
+						"description": "**Step 3: Room Availability**\n\nChecks room availability for the selected hotel and specified dates.\n\n**What happens:**\n- Checks availability for Oct 1-3, 2025\n- Returns list of available rooms with pricing\n- Automatically selects the first available room\n- Calculates total booking price\n- Stores room ID and price in environment\n\n**Next Step:** Create booking"
+					}
+				}
+			],
+			"description": "🏠 **Room Availability Step**\n\nThird step - check room availability for specific dates and auto-select a room for booking."
+		},
+		{
+			"name": "4️⃣ Create Booking",
+			"item": [
+				{
+					"name": "📝 Create Hotel Booking",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have required data from previous steps",
+									"const token = pm.environment.get('jwt_token');",
+									"const roomId = pm.environment.get('selected_room_id');",
+									"",
+									"if (!token) {",
+									"    console.error('❌ No JWT token found! Please run Step 1 (Authentication) first.');",
+									"    throw new Error('Authentication required - run Step 1 first');",
+									"}",
+									"",
+									"if (!roomId) {",
+									"    console.error('❌ No room selected! Please run Step 3 (Room Availability) first.');",
+									"    throw new Error('Room selection required - run Step 3 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Booking created successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('✅ Booking data is valid', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('booking');",
+									"    pm.expect(jsonData.booking).to.have.property('id');",
+									"    pm.expect(jsonData.booking).to.have.property('status');",
+									"    pm.expect(jsonData.booking).to.have.property('total_amount');",
+									"});",
+									"",
+									"pm.test('✅ Booking status is pending', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.booking.status).to.equal('pending');",
+									"});",
+									"",
+									"// Store booking data for payment step",
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    const booking = responseJson.booking;",
+									"    ",
+									"    // Store booking ID",
+									"    pm.environment.set('booking_id', booking.id);",
+									"    ",
+									"    console.log('📝 Booking created successfully!');",
+									"    console.log('🆔 Booking ID:', booking.id);",
+									"    console.log('📊 Status:', booking.status);",
+									"    console.log('💰 Total Amount: ETB', booking.total_amount);",
+									"    console.log('📅 Check-in:', booking.check_in_date);",
+									"    console.log('📅 Check-out:', booking.check_out_date);",
+									"    console.log('👤 Guest:', booking.guest_name);",
+									"    console.log('');",
+									"    console.log('➡️ Next Step: Initiate payment for your booking');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"room_id\": {{selected_room_id}},\n  \"check_in_date\": \"2025-10-01\",\n  \"check_out_date\": \"2025-10-03\",\n  \"guest_name\": \"Abebe Kebede\",\n  \"guest_email\": \"abebe.kebede@example.com\",\n  \"guest_phone\": \"+251911123456\",\n  \"special_requests\": \"Late check-in requested, non-smoking room preferred\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bookings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings"
+							]
+						},
+						"description": "**Step 4: Create Booking**\n\nCreates a hotel booking with the selected room and guest details.\n\n**What happens:**\n- Creates booking with selected room\n- Sets check-in/out dates (Oct 1-3, 2025)\n- Includes guest information and special requests\n- Returns booking with 'pending' status\n- Stores booking ID for payment processing\n\n**Next Step:** Initiate payment"
+					}
+				}
+			],
+			"description": "📝 **Create Booking Step**\n\nFourth step - create the actual hotel booking with guest details and selected room."
+		},
+		{
+			"name": "5️⃣ Payment Initiation",
+			"item": [
+				{
+					"name": "💳 Initiate Payment",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have required data from previous steps",
+									"const token = pm.environment.get('jwt_token');",
+									"const bookingId = pm.environment.get('booking_id');",
+									"",
+									"if (!token) {",
+									"    console.error('❌ No JWT token found! Please run Step 1 (Authentication) first.');",
+									"    throw new Error('Authentication required - run Step 1 first');",
+									"}",
+									"",
+									"if (!bookingId) {",
+									"    console.error('❌ No booking found! Please run Step 4 (Create Booking) first.');",
+									"    throw new Error('Booking required - run Step 4 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Payment initiated successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Payment data is valid', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('payment_id');",
+									"    pm.expect(jsonData).to.have.property('payment_url');",
+									"    pm.expect(jsonData).to.have.property('transaction_reference');",
+									"});",
+									"",
+									"pm.test('✅ Payment URL is provided', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.payment_url).to.be.a('string');",
+									"    pm.expect(jsonData.payment_url).to.include('http');",
+									"});",
+									"",
+									"// Store payment data for callback step",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // Store payment details",
+									"    pm.environment.set('payment_id', responseJson.payment_id);",
+									"    pm.environment.set('transaction_reference', responseJson.transaction_reference);",
+									"    pm.environment.set('payment_url', responseJson.payment_url);",
+									"    ",
+									"    console.log('💳 Payment initiated successfully!');",
+									"    console.log('🆔 Payment ID:', responseJson.payment_id);",
+									"    console.log('🔗 Transaction Reference:', responseJson.transaction_reference);",
+									"    console.log('🌐 Payment URL:', responseJson.payment_url);",
+									"    console.log('💰 Amount: ETB', responseJson.amount);",
+									"    console.log('🏦 Provider:', responseJson.payment_provider);",
+									"    console.log('');",
+									"    console.log('💡 In real scenario, user would be redirected to payment URL');",
+									"    console.log('➡️ Next Step: Simulate payment completion via callback');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"booking_id\": {{booking_id}},\n  \"payment_provider\": \"chapa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/initiate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"initiate"
+							]
+						},
+						"description": "**Step 5: Payment Initiation**\n\nInitiates payment processing for the created booking.\n\n**What happens:**\n- Creates payment record for the booking\n- Generates payment URL for Chapa gateway\n- Returns transaction reference for tracking\n- Stores payment ID and transaction reference\n- In real scenario, user would be redirected to payment URL\n\n**Next Step:** Simulate payment callback"
+					}
+				}
+			],
+			"description": "💳 **Payment Initiation Step**\n\nFifth step - initiate payment processing for the booking through payment gateway."
+		},
+		{
+			"name": "6️⃣ Payment Callback",
+			"item": [
+				{
+					"name": "✅ Payment Completion Callback",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have required data from previous steps",
+									"const transactionRef = pm.environment.get('transaction_reference');",
+									"",
+									"if (!transactionRef) {",
+									"    console.error('❌ No transaction reference found! Please run Step 5 (Payment Initiation) first.');",
+									"    throw new Error('Payment initiation required - run Step 5 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Payment callback processed successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Payment completion confirmed', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"pm.test('✅ Success message provided', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    pm.expect(jsonData.message).to.be.a('string');",
+									"});",
+									"",
+									"// Payment completed successfully",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    console.log('✅ Payment completed successfully!');",
+									"    console.log('💳 Transaction processed by payment gateway');",
+									"    console.log('📝 Message:', responseJson.message);",
+									"    console.log('🔗 Transaction Reference:', pm.environment.get('transaction_reference'));",
+									"    console.log('');",
+									"    console.log('🎉 Booking is now confirmed and paid!');",
+									"    console.log('➡️ Final Step: Get your booking receipt/confirmation');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"transaction_reference\": \"{{transaction_reference}}\",\n  \"status\": \"completed\",\n  \"amount\": 5000.00,\n  \"currency\": \"ETB\",\n  \"provider_transaction_id\": \"chapa_txn_1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/callback",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"callback"
+							]
+						},
+						"description": "**Step 6: Payment Callback**\n\nSimulates the payment gateway callback to complete the payment.\n\n**What happens:**\n- Simulates successful payment completion\n- Updates payment status to 'completed'\n- Updates booking status to 'confirmed'\n- Confirms the transaction with amount and currency\n- In real scenario, this would be called by payment gateway\n\n**Next Step:** Get booking receipt"
+					}
+				}
+			],
+			"description": "✅ **Payment Callback Step**\n\nSixth step - simulate payment gateway callback to complete the payment and confirm booking."
+		},
+		{
+			"name": "7️⃣ Booking Receipt",
+			"item": [
+				{
+					"name": "🧾 Get Booking Receipt",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have required data from previous steps",
+									"const token = pm.environment.get('jwt_token');",
+									"const bookingId = pm.environment.get('booking_id');",
+									"",
+									"if (!token) {",
+									"    console.error('❌ No JWT token found! Please run Step 1 (Authentication) first.');",
+									"    throw new Error('Authentication required - run Step 1 first');",
+									"}",
+									"",
+									"if (!bookingId) {",
+									"    console.error('❌ No booking found! Please run Step 4 (Create Booking) first.');",
+									"    throw new Error('Booking required - run Step 4 first');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response",
+									"pm.test('✅ Booking receipt retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('✅ Booking is confirmed', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('booking');",
+									"    pm.expect(jsonData.booking).to.have.property('status');",
+									"    pm.expect(jsonData.booking.status).to.equal('confirmed');",
+									"});",
+									"",
+									"pm.test('✅ Complete booking details provided', function () {",
+									"    const jsonData = pm.response.json();",
+									"    const booking = jsonData.booking;",
+									"    pm.expect(booking).to.have.property('id');",
+									"    pm.expect(booking).to.have.property('room');",
+									"    pm.expect(booking).to.have.property('hotel');",
+									"    pm.expect(booking).to.have.property('payment');",
+									"});",
+									"",
+									"// Display final booking confirmation",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    const booking = responseJson.booking;",
+									"    ",
+									"    console.log('🧾 BOOKING RECEIPT - CONFIRMATION');",
+									"    console.log('=====================================');",
+									"    console.log('🆔 Booking ID:', booking.id);",
+									"    console.log('📊 Status:', booking.status.toUpperCase());",
+									"    console.log('');",
+									"    console.log('🏨 HOTEL DETAILS:');",
+									"    console.log('   Name:', booking.hotel?.name || 'N/A');",
+									"    console.log('   Address:', booking.hotel?.address || 'N/A');",
+									"    console.log('   City:', booking.hotel?.city || 'N/A');",
+									"    console.log('');",
+									"    console.log('🛏️ ROOM DETAILS:');",
+									"    console.log('   Type:', booking.room?.room_type || 'N/A');",
+									"    console.log('   Price per night: ETB', booking.room?.price_per_night || 'N/A');",
+									"    console.log('');",
+									"    console.log('📅 STAY DETAILS:');",
+									"    console.log('   Check-in:', booking.check_in_date);",
+									"    console.log('   Check-out:', booking.check_out_date);",
+									"    console.log('   Nights:', booking.nights || 'N/A');",
+									"    console.log('');",
+									"    console.log('👤 GUEST DETAILS:');",
+									"    console.log('   Name:', booking.guest_name);",
+									"    console.log('   Email:', booking.guest_email);",
+									"    console.log('   Phone:', booking.guest_phone);",
+									"    console.log('');",
+									"    console.log('💳 PAYMENT DETAILS:');",
+									"    console.log('   Total Amount: ETB', booking.total_amount);",
+									"    console.log('   Payment Status:', booking.payment?.status || 'N/A');",
+									"    console.log('   Transaction Ref:', booking.payment?.transaction_reference || 'N/A');",
+									"    console.log('');",
+									"    console.log('🎉 BOOKING COMPLETED SUCCESSFULLY!');",
+									"    console.log('=====================================');",
+									"    console.log('');",
+									"    console.log('✅ Complete workflow finished!');",
+									"    console.log('📧 Confirmation email would be sent to guest');",
+									"    console.log('📱 SMS confirmation would be sent to phone');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "**Step 7: Booking Receipt**\n\nRetrieves the final booking confirmation with all details.\n\n**What happens:**\n- Gets complete booking details with confirmed status\n- Shows hotel, room, guest, and payment information\n- Displays final receipt/confirmation\n- Completes the entire booking workflow\n- In real scenario, confirmation email/SMS would be sent\n\n**🎉 Workflow Complete!**"
+					}
+				}
+			],
+			"description": "🧾 **Booking Receipt Step**\n\nFinal step - retrieve the complete booking confirmation with all details as a receipt."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "global-prerequest",
+				"exec": [
+					"// Global pre-request script for workflow collection",
+					"console.log('🏨 Hotel Booking Workflow - Step', pm.info.requestName);",
+					"console.log('⏰ Request started at:', new Date().toLocaleTimeString());"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "global-test",
+				"exec": [
+					"// Global test script for workflow collection",
+					"pm.test('⚡ Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test('📋 Content-Type is JSON', function () {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"});",
+					"",
+					"console.log('⏰ Request completed at:', new Date().toLocaleTimeString());",
+					"console.log('⚡ Response time:', pm.response.responseTime + 'ms');",
+					"console.log('📊 Status:', pm.response.status, pm.response.code);",
+					"console.log('---');"
+				],
+				"type": "text/javascript"
+			}
+		}
+	]
+}

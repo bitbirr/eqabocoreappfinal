@@ -1,0 +1,1001 @@
+{
+	"info": {
+		"_postman_id": "eqabo-hotel-booking-api",
+		"name": "Eqabo Hotel Booking API",
+		"description": "Complete API collection for the Eqabo Hotel Booking system with JWT authentication, hotel management, booking, and payment processing.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to get JWT token (automatically stored in environment)\n3. Use protected endpoints with automatic JWT authorization\n\n## Environment Variables\n- `base_url`: API base URL (default: http://localhost:3000)\n- `jwt_token`: JWT token (automatically set after login)\n- `user_id`: Current user ID (automatically set after login)\n- `booking_id`: Last created booking ID\n- `payment_id`: Last created payment ID\n\n## Test Data\nThe collection includes realistic test data for Ethiopian hotels and users.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "User authentication endpoints including registration, login, and protected routes",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has success property\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"pm.test(\"Response contains user data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('user');",
+									"    pm.expect(jsonData.data).to.have.property('token');",
+									"});",
+									"",
+									"// Store JWT token and user ID for subsequent requests",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"jwt_token\", jsonData.data.token);",
+									"        pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"        console.log(\"JWT token stored:\", jsonData.data.token.substring(0, 20) + \"...\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Abebe\",\n  \"last_name\": \"Kebede\",\n  \"email\": \"abebe.kebede@example.com\",\n  \"phone\": \"+251911123456\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"hotel_owner\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account. Creates a new user with the specified role (admin or hotel_owner)."
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has success property\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"pm.test(\"Response contains token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('token');",
+									"    pm.expect(jsonData.data.token).to.be.a('string');",
+									"});",
+									"",
+									"// Store JWT token and user ID for subsequent requests",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"jwt_token\", jsonData.data.token);",
+									"        pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"        console.log(\"JWT token stored:\", jsonData.data.token.substring(0, 20) + \"...\");",
+									"        console.log(\"User ID stored:\", jsonData.data.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+251911123456\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Authenticate user and receive JWT token. The token is automatically stored in environment variables for subsequent requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains user data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('user');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current user profile information. Requires valid JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Update JWT token if refresh is successful",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"jwt_token\", jsonData.data.token);",
+									"        console.log(\"JWT token refreshed and stored\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh JWT token. Returns a new token with extended expiration."
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Token is valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"validate"
+							]
+						},
+						"description": "Validate current JWT token. Returns token validity status."
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Only Endpoint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 or 403\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test(\"User has admin access\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('success');",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"    });",
+									"} else if (pm.response.code === 403) {",
+									"    pm.test(\"Access denied for non-admin user\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('success');",
+									"        pm.expect(jsonData.success).to.be.false;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/admin-only",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-only"
+							]
+						},
+						"description": "Test endpoint that requires admin role. Returns 403 if user doesn't have admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotel Owner Only Endpoint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 or 403\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test(\"User has hotel owner access\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('success');",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"    });",
+									"} else if (pm.response.code === 403) {",
+									"    pm.test(\"Access denied for non-hotel-owner user\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('success');",
+									"        pm.expect(jsonData.success).to.be.false;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/hotel-owner-only",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"hotel-owner-only"
+							]
+						},
+						"description": "Test endpoint that requires hotel_owner role. Returns 403 if user doesn't have hotel owner privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Logout successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"// Clear JWT token after logout",
+									"pm.environment.unset(\"jwt_token\");",
+									"pm.environment.unset(\"user_id\");",
+									"console.log(\"JWT token cleared after logout\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout current user and invalidate JWT token."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Hotels",
+			"description": "Hotel search and room availability endpoints",
+			"item": [
+				{
+					"name": "Search Hotels by City",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains hotels data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('hotels');",
+									"    pm.expect(jsonData.data.hotels).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"Response contains pagination\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('pagination');",
+									"    pm.expect(jsonData.data.pagination).to.have.property('total');",
+									"    pm.expect(jsonData.data.pagination).to.have.property('limit');",
+									"    pm.expect(jsonData.data.pagination).to.have.property('offset');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/hotels?city=Addis Ababa&limit=10&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Addis Ababa",
+									"description": "City to search hotels in"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of results to return"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Number of results to skip"
+								}
+							]
+						},
+						"description": "Search for hotels in a specific city with pagination support."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Room Availability",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains room data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('rooms');",
+									"    pm.expect(jsonData.data.rooms).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"Response contains hotel information\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('hotel');",
+									"    pm.expect(jsonData.data.hotel).to.have.property('id');",
+									"    pm.expect(jsonData.data.hotel).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/hotels/1/rooms?checkin=2025-10-01&checkout=2025-10-03",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"1",
+								"rooms"
+							],
+							"query": [
+								{
+									"key": "checkin",
+									"value": "2025-10-01",
+									"description": "Check-in date (YYYY-MM-DD)"
+								},
+								{
+									"key": "checkout",
+									"value": "2025-10-03",
+									"description": "Check-out date (YYYY-MM-DD)"
+								}
+							]
+						},
+						"description": "Get available rooms for a specific hotel within the given date range."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bookings",
+			"description": "Hotel booking management endpoints",
+			"item": [
+				{
+					"name": "Create Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response contains booking data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('booking');",
+									"});",
+									"",
+									"// Store booking ID for subsequent requests",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.booking) {",
+									"        pm.environment.set(\"booking_id\", jsonData.data.booking.id);",
+									"        console.log(\"Booking ID stored:\", jsonData.data.booking.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"room_id\": 1,\n  \"check_in_date\": \"2025-10-01\",\n  \"check_out_date\": \"2025-10-03\",\n  \"guest_name\": \"Abebe Kebede\",\n  \"guest_email\": \"abebe.kebede@example.com\",\n  \"guest_phone\": \"+251911123456\",\n  \"special_requests\": \"Late check-in requested, non-smoking room preferred\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bookings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings"
+							]
+						},
+						"description": "Create a new hotel booking. Requires authentication and valid room availability."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Booking Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains booking details\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('booking');",
+									"    pm.expect(jsonData.data).to.have.property('room');",
+									"    pm.expect(jsonData.data).to.have.property('hotel');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific booking including room and hotel details."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"description": "Payment processing endpoints",
+			"item": [
+				{
+					"name": "Initiate Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains payment data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('payment_url');",
+									"    pm.expect(jsonData.data).to.have.property('transaction_reference');",
+									"});",
+									"",
+									"// Store payment reference for subsequent requests",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.payment_id) {",
+									"        pm.environment.set(\"payment_id\", jsonData.data.payment_id);",
+									"        console.log(\"Payment ID stored:\", jsonData.data.payment_id);",
+									"    }",
+									"    if (jsonData.data && jsonData.data.transaction_reference) {",
+									"        pm.environment.set(\"transaction_reference\", jsonData.data.transaction_reference);",
+									"        console.log(\"Transaction reference stored:\", jsonData.data.transaction_reference);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"booking_id\": {{booking_id}},\n  \"payment_provider\": \"chapa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/initiate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"initiate"
+							]
+						},
+						"description": "Initiate payment for a booking. Returns payment URL and transaction reference."
+					},
+					"response": []
+				},
+				{
+					"name": "Payment Callback",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Callback processed successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"transaction_reference\": \"{{transaction_reference}}\",\n  \"status\": \"completed\",\n  \"amount\": 5000.00,\n  \"currency\": \"ETB\",\n  \"provider_transaction_id\": \"chapa_txn_1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/callback",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"callback"
+							]
+						},
+						"description": "Payment provider callback endpoint. Usually called by the payment gateway after payment completion."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Payment Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains payment status\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('payment');",
+									"    pm.expect(jsonData.data.payment).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Get current status of a payment including booking and transaction details."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"description": "API health and status endpoints",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"API is healthy\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData.status).to.eql('OK');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Check API health status and database connectivity."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script for automatic JWT token handling",
+					"",
+					"// Check if we have a JWT token in environment",
+					"const jwtToken = pm.environment.get('jwt_token');",
+					"",
+					"// If we have a token, add it to Authorization header for protected endpoints",
+					"if (jwtToken && pm.request.headers) {",
+					"    // Check if this is a protected endpoint (not login, register, health, or callback)",
+					"    const url = pm.request.url.toString();",
+					"    const isProtectedEndpoint = !url.includes('/login') && ",
+					"                               !url.includes('/register') && ",
+					"                               !url.includes('/health') &&",
+					"                               !url.includes('/callback') &&",
+					"                               !url.includes('/hotels?') &&",
+					"                               !url.includes('/hotels/') &&",
+					"                               url.includes('/api/');",
+					"    ",
+					"    if (isProtectedEndpoint) {",
+					"        // Check if Authorization header already exists",
+					"        let hasAuthHeader = false;",
+					"        pm.request.headers.each(function(header) {",
+					"            if (header.key.toLowerCase() === 'authorization') {",
+					"                hasAuthHeader = true;",
+					"                // Update existing header",
+					"                header.value = 'Bearer ' + jwtToken;",
+					"            }",
+					"        });",
+					"        ",
+					"        // Add Authorization header if it doesn't exist",
+					"        if (!hasAuthHeader) {",
+					"            pm.request.headers.add({",
+					"                key: 'Authorization',",
+					"                value: 'Bearer ' + jwtToken",
+					"            });",
+					"        }",
+					"        ",
+					"        console.log('JWT token automatically added to request');",
+					"    }",
+					"}",
+					"",
+					"// Set default base_url if not already set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:3000');",
+					"    console.log('Default base_url set to http://localhost:3000');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script for common response validations",
+					"",
+					"// Log response time",
+					"console.log('Response time:', pm.response.responseTime + 'ms');",
+					"",
+					"// Check for common response structure",
+					"if (pm.response.code >= 200 && pm.response.code < 300) {",
+					"    pm.test('Response time is acceptable', function () {",
+					"        pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"    });",
+					"    ",
+					"    pm.test('Response has Content-Type header', function () {",
+					"        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"    });",
+					"}",
+					"",
+					"// Log any errors for debugging",
+					"if (pm.response.code >= 400) {",
+					"    console.log('Error response:', pm.response.text());",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
