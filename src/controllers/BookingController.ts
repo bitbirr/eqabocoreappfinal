@@ -45,18 +45,48 @@ export class BookingController {
     try {
       const { userName, phone, hotelId, roomId, checkIn, checkOut }: CreateBookingRequest = req.body;
 
-      // Validate required fields
-      if (!userName || !phone || !hotelId || !roomId || !checkIn || !checkOut) {
+      // Trim inputs to handle whitespace
+      const trimmedUserName = userName?.trim();
+      const trimmedPhone = phone?.trim();
+      const trimmedHotelId = hotelId?.trim();
+      const trimmedRoomId = roomId?.trim();
+      const trimmedCheckIn = checkIn?.trim();
+      const trimmedCheckOut = checkOut?.trim();
+
+      // Validate required fields and check for empty strings after trimming
+      if (!trimmedUserName || !trimmedPhone || !trimmedHotelId || !trimmedRoomId || !trimmedCheckIn || !trimmedCheckOut) {
         res.status(400).json({
           success: false,
-          message: 'All fields are required: userName, phone, hotelId, roomId, checkIn, checkOut',
+          message: 'All fields are required and cannot be empty: userName, phone, hotelId, roomId, checkIn, checkOut',
           error: 'BAD_REQUEST'
         });
         return;
       }
 
-      const checkinDate = new Date(checkIn);
-      const checkoutDate = new Date(checkOut);
+      // Validate phone number format (basic regex for international phone numbers)
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(trimmedPhone)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid phone number format. Please provide a valid phone number.',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      // Validate date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(trimmedCheckIn) || !dateRegex.test(trimmedCheckOut)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid date format. Use YYYY-MM-DD.',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      const checkinDate = new Date(trimmedCheckIn);
+      const checkoutDate = new Date(trimmedCheckOut);
 
       // Validate dates
       if (isNaN(checkinDate.getTime()) || isNaN(checkoutDate.getTime())) {
@@ -77,10 +107,49 @@ export class BookingController {
         return;
       }
 
-      if (checkinDate < new Date()) {
+      // Ensure check-out is at least one day after check-in
+      const oneDayAfterCheckin = new Date(checkinDate);
+      oneDayAfterCheckin.setDate(checkinDate.getDate() + 1);
+      if (checkoutDate < oneDayAfterCheckin) {
+        res.status(400).json({
+          success: false,
+          message: 'Check-out date must be at least one day after check-in date',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      // Limit maximum booking duration to 30 days
+      const maxBookingDays = 30;
+      const bookingDuration = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (bookingDuration > maxBookingDays) {
+        res.status(400).json({
+          success: false,
+          message: `Booking duration cannot exceed ${maxBookingDays} days`,
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      // Check if check-in date is in the past (allow same day if before noon, but for simplicity, no past dates)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (checkinDate < today) {
         res.status(400).json({
           success: false,
           message: 'Check-in date cannot be in the past',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      // Limit check-in to maximum 1 year in advance
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      if (checkinDate > oneYearFromNow) {
+        res.status(400).json({
+          success: false,
+          message: 'Check-in date cannot be more than 1 year in advance',
           error: 'BAD_REQUEST'
         });
         return;
@@ -121,13 +190,14 @@ export class BookingController {
       }
 
       // Check for conflicting bookings (room already reserved for these dates)
-      const conflictingBooking = await queryRunner.manager.findOne(Booking, {
-        where: {
-          room_id: roomId,
-          status: In([BookingStatus.CONFIRMED, BookingStatus.PENDING]),
-          checkin_date: Between(checkinDate, checkoutDate)
-        }
-      });
+      // Overlap condition: existing.checkin < new.checkout AND existing.checkout > new.checkin
+      const conflictingBooking = await queryRunner.manager
+        .createQueryBuilder(Booking, 'booking')
+        .where('booking.room_id = :roomId', { roomId })
+        .andWhere('booking.status IN (:...statuses)', { statuses: [BookingStatus.CONFIRMED, BookingStatus.PENDING] })
+        .andWhere('booking.checkin_date < :checkoutDate', { checkoutDate })
+        .andWhere('booking.checkout_date > :checkinDate', { checkinDate })
+        .getOne();
 
       if (conflictingBooking) {
         await queryRunner.rollbackTransaction();
@@ -273,7 +343,11 @@ export class BookingController {
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error('Error creating booking:', error);
+      console.error('Error creating booking:', {
+        error: error.message,
+        stack: error.stack,
+        input: { userName: trimmedUserName, phone: trimmedPhone, hotelId: trimmedHotelId, roomId: trimmedRoomId, checkIn: trimmedCheckIn, checkOut: trimmedCheckOut }
+      });
       res.status(500).json({
         success: false,
         message: 'Internal server error while creating booking',

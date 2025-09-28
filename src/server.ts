@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 import { createApp, appConfig } from './app';
 import { entities } from './models';
+import { expirePendingBookingsJob } from './jobs/expirePending';
 
 // Load environment variables
 dotenv.config();
@@ -36,6 +37,11 @@ async function startServer() {
     // Create Express app
     const app = createApp(dataSource);
 
+    // Start scheduled jobs
+    console.log('🕐 Starting scheduled jobs...');
+    expirePendingBookingsJob.start();
+    console.log('✅ Scheduled jobs started successfully');
+
     // Start server
     const port = appConfig.port;
     app.listen(port, () => {
@@ -64,6 +70,10 @@ async function startServer() {
 process.on('SIGINT', async () => {
   console.log('\n🔄 Shutting down gracefully...');
   try {
+    // Stop scheduled jobs
+    console.log('🛑 Stopping scheduled jobs...');
+    expirePendingBookingsJob.stop();
+    
     await dataSource.destroy();
     console.log('✅ Database connection closed');
     process.exit(0);
@@ -76,6 +86,10 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   console.log('\n🔄 Received SIGTERM, shutting down gracefully...');
   try {
+    // Stop scheduled jobs
+    console.log('🛑 Stopping scheduled jobs...');
+    expirePendingBookingsJob.stop();
+    
     await dataSource.destroy();
     console.log('✅ Database connection closed');
     process.exit(0);

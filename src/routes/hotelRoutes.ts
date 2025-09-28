@@ -148,6 +148,62 @@ export function createHotelRoutes(dataSource: DataSource): Router {
 
   /**
    * @swagger
+   * /api/hotels/search:
+   *   get:
+   *     summary: Search hotels by city (alternative endpoint)
+   *     description: Search for hotels in a specific city with pagination support (same as /api/hotels)
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: query
+   *         name: city
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: "Addis Ababa"
+   *         description: City name to search hotels in
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 20
+   *           example: 20
+   *         description: Maximum number of hotels to return
+   *       - in: query
+   *         name: offset
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 0
+   *           default: 0
+   *           example: 0
+   *         description: Number of hotels to skip for pagination
+   *     responses:
+   *       200:
+   *         description: Hotels found successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HotelSearchResponse'
+   *       400:
+   *         description: Invalid request parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.get('/search', (req, res) => hotelController.searchHotels(req, res));
+
+  /**
+   * @swagger
    * /api/hotels/{id}/rooms:
    *   get:
    *     summary: Get available rooms for a hotel

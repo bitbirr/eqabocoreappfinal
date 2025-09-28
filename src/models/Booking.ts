@@ -6,7 +6,7 @@ import { Payment } from './Payment';
 import { PaymentLog } from './PaymentLog';
 
 export enum BookingStatus {
-  PENDING = 'pending',
+  PENDING_PAYMENT = 'pending_payment',
   CONFIRMED = 'confirmed',
   CANCELLED = 'cancelled',
   EXPIRED = 'expired',
@@ -45,7 +45,7 @@ export class Booking {
   @Column({
     type: 'enum',
     enum: BookingStatus,
-    default: BookingStatus.PENDING,
+    default: BookingStatus.PENDING_PAYMENT,
     nullable: false
   })
   status!: BookingStatus;
