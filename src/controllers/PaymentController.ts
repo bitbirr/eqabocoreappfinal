@@ -21,6 +21,11 @@ interface PaymentCallbackRequest {
   error_message?: string;
 }
 
+interface UpdatePaymentRequest {
+  status?: PaymentStatus;
+  provider?: PaymentProvider;
+}
+
 export class PaymentController {
   private bookingRepository: Repository<Booking>;
   private paymentRepository: Repository<Payment>;
@@ -408,6 +413,211 @@ export class PaymentController {
         message: 'Internal server error while fetching payment status',
         error: 'INTERNAL_SERVER_ERROR'
       });
+    }
+  }
+
+  /**
+   * Update payment details
+   * PUT /api/payments/:id
+   */
+  async updatePayment(req: Request, res: Response): Promise<void> {
+    const queryRunner = this.paymentRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const { id } = req.params;
+      const updates: UpdatePaymentRequest = req.body;
+
+      // Find payment with booking
+      const payment = await queryRunner.manager.findOne(Payment, {
+        where: { id },
+        relations: ['booking']
+      });
+
+      if (!payment) {
+        await queryRunner.rollbackTransaction();
+        res.status(404).json({
+          success: false,
+          message: 'Payment not found',
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      // Validate status transitions
+      if (updates.status) {
+        const currentStatus = payment.status;
+        const newStatus = updates.status;
+
+        // Define allowed transitions
+        const allowedTransitions: Record<PaymentStatus, PaymentStatus[]> = {
+          [PaymentStatus.PENDING]: [PaymentStatus.SUCCESS, PaymentStatus.FAILED, PaymentStatus.CANCELLED],
+          [PaymentStatus.SUCCESS]: [], // Cannot change successful payment
+          [PaymentStatus.FAILED]: [PaymentStatus.PENDING], // Can retry failed payment
+          [PaymentStatus.CANCELLED]: [] // Cannot change cancelled payment
+        };
+
+        if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
+          await queryRunner.rollbackTransaction();
+          res.status(400).json({
+            success: false,
+            message: `Invalid status transition from ${currentStatus} to ${newStatus}`,
+            error: 'INVALID_STATUS_TRANSITION'
+          });
+          return;
+        }
+
+        // Handle status change effects
+        if (newStatus === PaymentStatus.SUCCESS && currentStatus !== PaymentStatus.SUCCESS) {
+          // Update booking to confirmed
+          payment.booking.status = BookingStatus.CONFIRMED;
+          await queryRunner.manager.save(Booking, payment.booking);
+        } else if (newStatus === PaymentStatus.FAILED || newStatus === PaymentStatus.CANCELLED) {
+          // Cancel booking and release room
+          payment.booking.status = BookingStatus.CANCELLED;
+          await queryRunner.manager.save(Booking, payment.booking);
+
+          await queryRunner.manager.update(Room, payment.booking.room_id, {
+            status: RoomStatus.AVAILABLE
+          });
+        }
+      }
+
+      // Update provider if provided (only for pending payments)
+      if (updates.provider) {
+        if (payment.status !== PaymentStatus.PENDING) {
+          await queryRunner.rollbackTransaction();
+          res.status(422).json({
+            success: false,
+            message: 'Cannot change payment provider for non-pending payment',
+            error: 'INVALID_OPERATION'
+          });
+          return;
+        }
+
+        if (!Object.values(PaymentProvider).includes(updates.provider)) {
+          await queryRunner.rollbackTransaction();
+          res.status(400).json({
+            success: false,
+            message: 'Invalid payment provider',
+            error: 'BAD_REQUEST'
+          });
+          return;
+        }
+
+        payment.provider = updates.provider;
+      }
+
+      // Update status
+      if (updates.status) {
+        payment.status = updates.status;
+      }
+
+      const updatedPayment = await queryRunner.manager.save(Payment, payment);
+
+      await queryRunner.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment updated successfully',
+        data: {
+          id: updatedPayment.id,
+          status: updatedPayment.status,
+          provider: updatedPayment.provider,
+          amount: Number(updatedPayment.amount),
+          updated_at: updatedPayment.updated_at
+        }
+      });
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error('Error updating payment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while updating payment',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Delete payment
+   * DELETE /api/payments/:id
+   */
+  async deletePayment(req: Request, res: Response): Promise<void> {
+    const queryRunner = this.paymentRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const { id } = req.params;
+
+      // Find payment with booking
+      const payment = await queryRunner.manager.findOne(Payment, {
+        where: { id },
+        relations: ['booking']
+      });
+
+      if (!payment) {
+        await queryRunner.rollbackTransaction();
+        res.status(404).json({
+          success: false,
+          message: 'Payment not found',
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      // Check if payment can be deleted
+      if (payment.status === PaymentStatus.SUCCESS) {
+        await queryRunner.rollbackTransaction();
+        res.status(422).json({
+          success: false,
+          message: 'Cannot delete successful payment',
+          error: 'CANNOT_DELETE_SUCCESSFUL_PAYMENT'
+        });
+        return;
+      }
+
+      // If payment is pending, cancel booking and release room
+      if (payment.status === PaymentStatus.PENDING) {
+        payment.booking.status = BookingStatus.CANCELLED;
+        await queryRunner.manager.save(Booking, payment.booking);
+
+        await queryRunner.manager.update(Room, payment.booking.room_id, {
+          status: RoomStatus.AVAILABLE
+        });
+      }
+
+      // Delete payment logs first
+      await queryRunner.manager.delete(PaymentLog, { payment_id: id });
+
+      // Delete payment
+      await queryRunner.manager.delete(Payment, id);
+
+      await queryRunner.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment deleted successfully',
+        data: {
+          id: payment.id
+        }
+      });
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error('Error deleting payment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while deleting payment',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    } finally {
+      await queryRunner.release();
     }
   }
 }

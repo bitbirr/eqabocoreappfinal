@@ -275,5 +275,155 @@ export function createPaymentRoutes(dataSource: DataSource): Router {
    */
   router.get('/:id', (req, res) => paymentController.getPaymentStatus(req, res));
 
+  /**
+   * @swagger
+   * /api/payments/{id}:
+   *   put:
+   *     summary: Update payment details
+   *     description: Update payment status or provider (admin operation)
+   *     tags: [Payments]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           example: 1
+   *         description: Payment ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [pending, success, failed, cancelled]
+   *                 example: "success"
+   *                 description: New payment status
+   *               provider:
+   *                 type: string
+   *                 enum: [chapa, telebirr, cbe_birr, stripe]
+   *                 example: "chapa"
+   *                 description: New payment provider (only for pending payments)
+   *     responses:
+   *       200:
+   *         description: Payment updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaymentStatusResponse'
+   *       400:
+   *         description: Invalid request data or status transition
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Access denied - admin only
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Payment not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       422:
+   *         description: Invalid operation (cannot change successful payment, etc.)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/:id', (req, res) => paymentController.updatePayment(req, res));
+
+  /**
+   * @swagger
+   * /api/payments/{id}:
+   *   delete:
+   *     summary: Delete payment
+   *     description: Delete a payment and cancel associated booking (admin operation)
+   *     tags: [Payments]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           example: 1
+   *         description: Payment ID
+   *     responses:
+   *       200:
+   *         description: Payment deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Payment deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                       example: 1
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Access denied - admin only
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Payment not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       422:
+   *         description: Cannot delete successful payment
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.delete('/:id', (req, res) => paymentController.deletePayment(req, res));
+
   return router;
 }

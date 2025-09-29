@@ -10,9 +10,10 @@ export enum PaymentProvider {
 }
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  SUCCESS = 'success',
-  FAILED = 'failed'
+   PENDING = 'pending',
+   SUCCESS = 'success',
+   FAILED = 'failed',
+   CANCELLED = 'cancelled'
 }
 
 @Entity('payments')
@@ -47,6 +48,9 @@ export class Payment {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  updated_at!: Date;
 
   // Relations
   @ManyToOne(() => Booking, booking => booking.payments)

@@ -261,5 +261,250 @@ export function createHotelRoutes(dataSource: DataSource): Router {
    */
   router.get('/:id/rooms', (req, res) => hotelController.getHotelRooms(req, res));
 
+  /**
+   * @swagger
+   * /api/hotels:
+   *   post:
+   *     summary: Create a new hotel
+   *     description: Create a new hotel with the provided details
+   *     tags: [Hotels]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - location
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 example: "Sheraton Addis"
+   *               location:
+   *                 type: string
+   *                 example: "Addis Ababa"
+   *               description:
+   *                 type: string
+   *                 example: "Luxury hotel in the heart of Addis Ababa"
+   *               owner_id:
+   *                 type: string
+   *                 example: "uuid-hotel-owner"
+   *     responses:
+   *       201:
+   *         description: Hotel created successfully
+   *       400:
+   *         description: Invalid request data
+   *       409:
+   *         description: Hotel already exists
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/', (req, res) => hotelController.createHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/hotels/{id}:
+   *   put:
+   *     summary: Update hotel details
+   *     description: Update an existing hotel's information
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Hotel ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 example: "Sheraton Addis Updated"
+   *               location:
+   *                 type: string
+   *                 example: "Addis Ababa"
+   *               description:
+   *                 type: string
+   *                 example: "Updated luxury hotel description"
+   *               status:
+   *                 type: string
+   *                 enum: [active, inactive, suspended]
+   *                 example: "active"
+   *     responses:
+   *       200:
+   *         description: Hotel updated successfully
+   *       400:
+   *         description: Invalid request data
+   *       404:
+   *         description: Hotel not found
+   *       409:
+   *         description: Hotel name conflict
+   *       500:
+   *         description: Internal server error
+   */
+  router.put('/:id', (req, res) => hotelController.updateHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/hotels/{id}:
+   *   delete:
+   *     summary: Delete hotel
+   *     description: Soft delete a hotel by setting its status to inactive
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Hotel ID
+   *     responses:
+   *       200:
+   *         description: Hotel deleted successfully
+   *       404:
+   *         description: Hotel not found
+   *       422:
+   *         description: Cannot delete hotel with active bookings
+   *       500:
+   *         description: Internal server error
+   */
+  router.delete('/:id', (req, res) => hotelController.deleteHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/hotels/{hotelId}/rooms:
+   *   post:
+   *     summary: Create a new room for a hotel
+   *     description: Create a new room for the specified hotel
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: hotelId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Hotel ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - room_number
+   *               - room_type
+   *               - price_per_night
+   *             properties:
+   *               room_number:
+   *                 type: string
+   *                 example: "101"
+   *               room_type:
+   *                 type: string
+   *                 example: "Deluxe"
+   *               price_per_night:
+   *                 type: number
+   *                 format: decimal
+   *                 example: 150.00
+   *               description:
+   *                 type: string
+   *                 example: "Spacious room with city view"
+   *     responses:
+   *       201:
+   *         description: Room created successfully
+   *       400:
+   *         description: Invalid request data
+   *       404:
+   *         description: Hotel not found
+   *       409:
+   *         description: Room number already exists
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/:hotelId/rooms', (req, res) => hotelController.createRoom(req, res));
+
+  /**
+   * @swagger
+   * /api/rooms/{id}:
+   *   put:
+   *     summary: Update room details
+   *     description: Update an existing room's information
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Room ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               room_number:
+   *                 type: string
+   *                 example: "102"
+   *               room_type:
+   *                 type: string
+   *                 example: "Suite"
+   *               price_per_night:
+   *                 type: number
+   *                 format: decimal
+   *                 example: 200.00
+   *               description:
+   *                 type: string
+   *                 example: "Updated room description"
+   *               status:
+   *                 type: string
+   *                 enum: [available, occupied, maintenance, out_of_order]
+   *                 example: "available"
+   *     responses:
+   *       200:
+   *         description: Room updated successfully
+   *       400:
+   *         description: Invalid request data
+   *       404:
+   *         description: Room not found
+   *       409:
+   *         description: Room number conflict
+   *       500:
+   *         description: Internal server error
+   */
+  router.put('/rooms/:id', (req, res) => hotelController.updateRoom(req, res));
+
+  /**
+   * @swagger
+   * /api/rooms/{id}:
+   *   delete:
+   *     summary: Delete room
+   *     description: Permanently delete a room
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Room ID
+   *     responses:
+   *       200:
+   *         description: Room deleted successfully
+   *       404:
+   *         description: Room not found
+   *       422:
+   *         description: Cannot delete room with active bookings
+   *       500:
+   *         description: Internal server error
+   */
+  router.delete('/rooms/:id', (req, res) => hotelController.deleteRoom(req, res));
+
   return router;
 }

@@ -210,7 +210,7 @@ export const seedBookings = [
     checkin_date: new Date('2024-03-01'),
     checkout_date: new Date('2024-03-05'),
     total_amount: 6000.00, // 4 nights * 1500
-    status: BookingStatus.PENDING
+    status: BookingStatus.PENDING_PAYMENT
   },
   {
     checkin_date: new Date('2024-03-10'),
@@ -228,7 +228,7 @@ export const seedBookings = [
     checkin_date: new Date('2024-04-01'),
     checkout_date: new Date('2024-04-07'),
     total_amount: 13200.00, // 6 nights * 2200
-    status: BookingStatus.PENDING
+    status: BookingStatus.PENDING_PAYMENT
   }
 ];
 

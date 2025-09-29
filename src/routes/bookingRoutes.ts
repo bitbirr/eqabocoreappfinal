@@ -193,5 +193,160 @@ export function createBookingRoutes(dataSource: DataSource): Router {
    */
   router.get('/:id', (req, res) => bookingController.getBooking(req, res));
 
+  /**
+   * @swagger
+   * /api/bookings/{id}:
+   *   put:
+   *     summary: Update booking details
+   *     description: Update booking dates or cancel booking
+   *     tags: [Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           example: 1
+   *         description: Booking ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               checkIn:
+   *                 type: string
+   *                 format: date
+   *                 example: "2025-10-02"
+   *                 description: New check-in date (YYYY-MM-DD)
+   *               checkOut:
+   *                 type: string
+   *                 format: date
+   *                 example: "2025-10-04"
+   *                 description: New check-out date (YYYY-MM-DD)
+   *               status:
+   *                 type: string
+   *                 enum: [cancelled]
+   *                 example: "cancelled"
+   *                 description: Only cancellation is allowed
+   *     responses:
+   *       200:
+   *         description: Booking updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BookingResponse'
+   *       400:
+   *         description: Invalid request data or status transition
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Access denied - can only update own bookings
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Booking not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       422:
+   *         description: Cannot update booking (room conflict, paid booking, etc.)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/:id', (req, res) => bookingController.updateBooking(req, res));
+
+  /**
+   * @swagger
+   * /api/bookings/{id}:
+   *   delete:
+   *     summary: Delete booking
+   *     description: Permanently delete a booking and associated data
+   *     tags: [Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           example: 1
+   *         description: Booking ID
+   *     responses:
+   *       200:
+   *         description: Booking deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Booking deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                       example: 1
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Access denied - can only delete own bookings
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Booking not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       422:
+   *         description: Cannot delete confirmed booking with successful payment
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.delete('/:id', (req, res) => bookingController.deleteBooking(req, res));
+
   return router;
 }
