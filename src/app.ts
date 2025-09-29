@@ -2,7 +2,7 @@ import express from 'express';
 import { DataSource } from 'typeorm';
 import { User } from './models/User';
 import { createMainRouter } from './routes';
-import { specs, swaggerUi } from './config/swagger';
+import { specs, swaggerUi, swaggerUiOptions } from './config/swagger';
 
 /**
  * Create and configure Express application with authentication
@@ -37,20 +37,7 @@ export function createApp(dataSource: DataSource): express.Application {
   const userRepository = dataSource.getRepository(User);
 
   // Swagger UI Documentation
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
-    explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Eqabo Hotel Booking API Documentation',
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayRequestDuration: true,
-      docExpansion: 'none',
-      filter: true,
-      showExtensions: true,
-      showCommonExtensions: true,
-      tryItOutEnabled: true
-    }
-  }));
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 
   // Routes
   app.use('/api', createMainRouter(userRepository, dataSource));

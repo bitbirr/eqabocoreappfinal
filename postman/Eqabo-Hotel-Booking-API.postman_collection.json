@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "eqabo-hotel-booking-api",
 		"name": "Eqabo Hotel Booking API",
-		"description": "Complete API collection for the Eqabo Hotel Booking system with JWT authentication, hotel management, booking, and payment processing.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to get JWT token (automatically stored in environment)\n3. Use protected endpoints with automatic JWT authorization\n\n## Environment Variables\n- `base_url`: API base URL (default: http://localhost:3000)\n- `jwt_token`: JWT token (automatically set after login)\n- `user_id`: Current user ID (automatically set after login)\n- `booking_id`: Last created booking ID\n- `payment_id`: Last created payment ID\n\n## Test Data\nThe collection includes realistic test data for Ethiopian hotels and users.",
+		"description": "Complete API collection for the Eqabo Hotel Booking system with JWT authentication, full CRUD operations for hotels, rooms, bookings, payments, and background job processing.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to get JWT token (automatically stored in environment)\n3. Use protected endpoints with automatic JWT authorization\n\n## CRUD Operations\n- **Hotels**: Create, Read (search), Update, Delete (soft delete)\n- **Rooms**: Create, Read (availability), Update, Delete (hard delete)\n- **Bookings**: Create, Read, Update (dates/status), Delete\n- **Payments**: Create (initiate), Read (status), Update (status/provider), Delete\n\n## Environment Variables\n- `base_url`: API base URL (default: http://localhost:3000)\n- `jwt_token`: JWT token (automatically set after login)\n- `user_id`: Current user ID (automatically set after login)\n- `booking_id`: Last created booking ID\n- `payment_id`: Last created payment ID\n- `hotel_id`: Last created hotel ID\n- `room_id`: Last created room ID\n\n## Background Jobs\n- **expirePending.js**: Automatically expires unpaid bookings older than 15 minutes\n- Runs every minute to clean up stale pending bookings\n\n## Test Data\nThe collection includes realistic test data for Ethiopian hotels and users from seed data.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -570,6 +570,304 @@
 						"description": "Get available rooms for a specific hotel within the given date range."
 					},
 					"response": []
+				},
+				{
+					"name": "Create Hotel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response contains hotel data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('name');",
+									"});",
+									"",
+									"// Store hotel ID for subsequent requests",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"hotel_id\", jsonData.data.id);",
+									"        console.log(\"Hotel ID stored:\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Hotel Addis\",\n  \"location\": \"Bole, Addis Ababa\",\n  \"description\": \"A test hotel for API testing\",\n  \"owner_id\": \"550e8400-e29b-41d4-a716-446655440001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hotels",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels"
+							]
+						},
+						"description": "Create a new hotel with the provided details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Hotel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains updated hotel data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Test Hotel Addis\",\n  \"description\": \"Updated test hotel description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hotels/{{hotel_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"{{hotel_id}}"
+							]
+						},
+						"description": "Update an existing hotel's information."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Hotel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Hotel deleted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/hotels/{{hotel_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"{{hotel_id}}"
+							]
+						},
+						"description": "Soft delete a hotel by setting its status to inactive."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Room",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response contains room data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('room_number');",
+									"});",
+									"",
+									"// Store room ID for subsequent requests",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"room_id\", jsonData.data.id);",
+									"        console.log(\"Room ID stored:\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"room_number\": \"201\",\n  \"room_type\": \"Deluxe Suite\",\n  \"price_per_night\": 3000.00,\n  \"description\": \"Spacious suite with city view\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hotels/{{hotel_id}}/rooms",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"hotels",
+								"{{hotel_id}}",
+								"rooms"
+							]
+						},
+						"description": "Create a new room for a specific hotel."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Room",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains updated room data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('room_number');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"room_number\": \"202\",\n  \"price_per_night\": 3500.00,\n  \"description\": \"Updated spacious suite\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/rooms/{{room_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rooms",
+								"{{room_id}}"
+							]
+						},
+						"description": "Update an existing room's information."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Room",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Room deleted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/rooms/{{room_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"rooms",
+								"{{room_id}}"
+							]
+						},
+						"description": "Permanently delete a room."
+					},
+					"response": []
 				}
 			]
 		},
@@ -686,6 +984,106 @@
 							]
 						},
 						"description": "Get detailed information about a specific booking including room and hotel details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains updated booking data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cancelled\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "Update booking details or cancel a booking."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Booking deleted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "Permanently delete a booking and associated data."
 					},
 					"response": []
 				}
@@ -857,6 +1255,106 @@
 							]
 						},
 						"description": "Get current status of a payment including booking and transaction details."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains updated payment data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"success\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Update payment status or provider (admin operation)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Payment deleted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/payments/{{payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"{{payment_id}}"
+							]
+						},
+						"description": "Delete a payment and cancel associated booking (admin operation)."
 					},
 					"response": []
 				}

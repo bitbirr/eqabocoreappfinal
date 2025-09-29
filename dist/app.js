@@ -37,20 +37,7 @@ function createApp(dataSource) {
     // Get User repository
     const userRepository = dataSource.getRepository(User_1.User);
     // Swagger UI Documentation
-    app.use('/api/docs', swagger_1.swaggerUi.serve, swagger_1.swaggerUi.setup(swagger_1.specs, {
-        explorer: true,
-        customCss: '.swagger-ui .topbar { display: none }',
-        customSiteTitle: 'Eqabo Hotel Booking API Documentation',
-        swaggerOptions: {
-            persistAuthorization: true,
-            displayRequestDuration: true,
-            docExpansion: 'none',
-            filter: true,
-            showExtensions: true,
-            showCommonExtensions: true,
-            tryItOutEnabled: true
-        }
-    }));
+    app.use('/api/docs', swagger_1.swaggerUi.serve, swagger_1.swaggerUi.setup(swagger_1.specs, swagger_1.swaggerUiOptions));
     // Routes
     app.use('/api', (0, routes_1.createMainRouter)(userRepository, dataSource));
     // Root endpoint
