@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 import { createApp, appConfig } from './app';
 import { entities } from './models';
+// @ts-ignore
 import { expirePendingBookingsJob } from './jobs/expirePending';
 
 // Load environment variables
@@ -39,7 +40,7 @@ async function startServer() {
 
     // Start scheduled jobs
     console.log('🕐 Starting scheduled jobs...');
-    expirePendingBookingsJob.start();
+    expirePendingBookingsJob.start(dataSource);
     console.log('✅ Scheduled jobs started successfully');
 
     // Start server

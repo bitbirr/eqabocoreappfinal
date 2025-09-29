@@ -83,7 +83,7 @@ export class PaymentController {
       }
 
       // Check if booking is in pending status
-      if (booking.status !== BookingStatus.PENDING) {
+      if (booking.status !== BookingStatus.PENDING_PAYMENT) {
         await queryRunner.rollbackTransaction();
         res.status(422).json({
           success: false,

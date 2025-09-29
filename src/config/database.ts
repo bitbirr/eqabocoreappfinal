@@ -16,7 +16,7 @@ export const AppDataSource = new DataSource({
   entities: entities,
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test' ? { rejectUnauthorized: false } : false,
 });
 
 export const initializeDatabase = async (): Promise<void> => {

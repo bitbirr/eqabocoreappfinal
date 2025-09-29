@@ -194,7 +194,7 @@ export class BookingController {
       const conflictingBooking = await queryRunner.manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.room_id = :roomId', { roomId })
-        .andWhere('booking.status IN (:...statuses)', { statuses: [BookingStatus.CONFIRMED, BookingStatus.PENDING] })
+        .andWhere('booking.status IN (:...statuses)', { statuses: [BookingStatus.CONFIRMED, BookingStatus.PENDING_PAYMENT] })
         .andWhere('booking.checkin_date < :checkoutDate', { checkoutDate })
         .andWhere('booking.checkout_date > :checkinDate', { checkinDate })
         .getOne();
@@ -242,7 +242,7 @@ export class BookingController {
           room_id: roomId,
           checkin_date: checkinDate,
           checkout_date: checkoutDate,
-          status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED])
+          status: In([BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED])
         }
       });
 
@@ -265,7 +265,7 @@ export class BookingController {
         checkout_date: checkoutDate,
         nights,
         total_amount: totalAmount,
-        status: BookingStatus.PENDING
+        status: BookingStatus.PENDING_PAYMENT
       });
 
       const savedBooking = await queryRunner.manager.save(Booking, booking);
@@ -343,10 +343,11 @@ export class BookingController {
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      const err = error as Error;
       console.error('Error creating booking:', {
-        error: error.message,
-        stack: error.stack,
-        input: { userName: trimmedUserName, phone: trimmedPhone, hotelId: trimmedHotelId, roomId: trimmedRoomId, checkIn: trimmedCheckIn, checkOut: trimmedCheckOut }
+        error: err.message,
+        stack: err.stack,
+        input: req.body
       });
       res.status(500).json({
         success: false,

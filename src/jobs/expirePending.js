@@ -5,25 +5,30 @@ const { dataSource } = require('../server');
  * Runs every minute to check for expired bookings
  */
 class ExpirePendingBookingsJob {
-  constructor() {
+  constructor(dataSourceParam = null) {
     this.intervalId = null;
     this.isRunning = false;
+    this.dataSource = dataSourceParam || dataSource;
   }
 
   /**
    * Start the scheduled job
    */
-  start() {
+  start(dataSourceParam = null) {
     if (this.intervalId) {
       console.log('⚠️  ExpirePendingBookingsJob is already running');
       return;
     }
 
+    if (dataSourceParam) {
+      this.dataSource = dataSourceParam;
+    }
+
     console.log('🕐 Starting ExpirePendingBookingsJob - will run every minute');
-    
+
     // Run immediately on start
     this.executeJob();
-    
+
     // Then run every minute (60000 ms)
     this.intervalId = setInterval(() => {
       this.executeJob();
@@ -58,15 +63,15 @@ class ExpirePendingBookingsJob {
       console.log(`🔄 [${startTime.toISOString()}] Executing ExpirePendingBookingsJob...`);
 
       // Check if database is connected
-      if (!dataSource || !dataSource.isInitialized) {
+      if (!this.dataSource || !this.dataSource.isInitialized) {
         throw new Error('Database connection is not initialized');
       }
 
       // Execute the SQL query to expire pending bookings older than 15 minutes
-      const result = await dataSource.query(`
-        UPDATE bookings 
-        SET status = 'expired' 
-        WHERE status = 'pending_payment' 
+      const result = await this.dataSource.query(`
+        UPDATE bookings
+        SET status = 'expired'
+        WHERE status = 'pending_payment'
         AND created_at < NOW() - INTERVAL '15 minutes'
       `);
 

@@ -157,7 +157,7 @@ export class HotelController {
       const conflictingBookings = await this.bookingRepository.find({
         where: {
           hotel_id: id,
-          status: In([BookingStatus.CONFIRMED, BookingStatus.PENDING]),
+          status: In([BookingStatus.CONFIRMED, BookingStatus.PENDING_PAYMENT]),
           checkin_date: Between(checkinDate, checkoutDate)
         },
         select: ['room_id']
