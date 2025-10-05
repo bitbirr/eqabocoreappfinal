@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: eqabo-hotel-booking-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/server.js
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: PGSSLMODE
+        value: require
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: CORS_ORIGIN
+        sync: false

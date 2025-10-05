@@ -8,6 +8,7 @@
     "dev": "ts-node src/server.ts",
     "server": "ts-node src/server.ts",
     "test": "jest",
+    "test:smoke": "pwsh -NoProfile -File ./scripts/run-newman.ps1",
     "test:watch": "jest --watchAll",
     "test:coverage": "jest --coverage",
     "typeorm": "typeorm-ts-node-commonjs",
@@ -27,6 +28,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=18 <23"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/client": "^6.16.2",

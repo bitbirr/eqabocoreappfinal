@@ -24,6 +24,8 @@ const dataSource = new DataSource({
   password: DB_PASS,
   database: process.env.DB_NAME || 'eqabo_hotel_booking',
   entities: entities,
+  migrations: process.env.NODE_ENV === 'production' ? ['dist/migrations/*.js'] : ['src/migrations/*.ts'],
+  migrationsTableName: 'migrations',
   synchronize: process.env.NODE_ENV === 'development', // Only in development
   logging: process.env.NODE_ENV === 'development',
   ssl: useSSL ? { rejectUnauthorized: false } : false
@@ -39,6 +41,22 @@ async function startServer() {
     await dataSource.initialize();
     console.log('✅ Database connected successfully');
 
+    // Optionally run migrations in production if enabled
+    const runMigrations = ['1', 'true', 'yes'].includes((process.env.RUN_MIGRATIONS || '').toLowerCase());
+    if (runMigrations) {
+      console.log('📦 Running database migrations...');
+      try {
+        const migrations = await dataSource.runMigrations();
+        console.log(`✅ Migrations complete (${migrations.length} applied)`);
+      } catch (mErr) {
+        console.error('❌ Migration error:', mErr);
+        // Fail fast in production if migrations are requested and fail
+        if (process.env.NODE_ENV === 'production') {
+          process.exit(1);
+        }
+      }
+    }
+
     // Create Express app
     const app = createApp(dataSource);
 
@@ -46,14 +64,14 @@ async function startServer() {
     const port = appConfig.port;
     app.listen(port, () => {
       console.log(`🚀 ${appConfig.name} v${appConfig.version} is running on port ${port}`);
-      console.log(`📖 API Documentation: http://localhost:${port}/api-docs`);
-      console.log(`❤️  Health Check: http://localhost:${port}/api/health`);
+      console.log(`📖 API Documentation: /api-docs`);
+      console.log(`❤️  Health Check: /api/health`);
       console.log(`🔐 Authentication endpoints:`);
-      console.log(`   📝 Register: POST http://localhost:${port}/api/auth/register`);
-      console.log(`   🔑 Login: POST http://localhost:${port}/api/auth/login`);
-      console.log(`   👤 Profile: GET http://localhost:${port}/api/auth/me`);
-      console.log(`   🛡️  Admin: GET http://localhost:${port}/api/auth/admin-only`);
-      console.log(`   🏨 Hotel Owner: GET http://localhost:${port}/api/auth/hotel-owner-only`);
+      console.log(`   📝 Register: POST /api/auth/register`);
+      console.log(`   🔑 Login: POST /api/auth/login`);
+      console.log(`   👤 Profile: GET /api/auth/me`);
+      console.log(`   🛡️  Admin: GET /api/auth/admin-only`);
+      console.log(`   🏨 Hotel Owner: GET /api/auth/hotel-owner-only`);
       console.log(`\n🔧 Environment: ${appConfig.environment}`);
       console.log(`🔒 Security features enabled: ${Object.entries(appConfig.features).filter(([, enabled]) => enabled).map(([feature]) => feature).join(', ')}`);
     });

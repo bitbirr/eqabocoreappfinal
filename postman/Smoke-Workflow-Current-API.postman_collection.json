@@ -1,0 +1,199 @@
+{
+  "info": {
+    "_postman_id": "smoke-workflow-current-api-2025",
+    "name": "Smoke Workflow - Current API",
+    "description": "Minimal end-to-end smoke tests aligned with current API shapes: health → search hotels → available rooms → create booking → initiate payment → callback success → payment status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/health",
+          "host": ["{{base_url}}"],
+          "path": ["api", "health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Health success true', () => pm.expect(json.success).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search Hotels",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/hotels?city={{city}}&limit=10&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["api", "hotels"],
+          "query": [
+            {"key": "city", "value": "{{city}}"},
+            {"key": "limit", "value": "10"},
+            {"key": "offset", "value": "0"}
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Success true', () => pm.expect(json.success).to.eql(true));",
+              "pm.test('Data is array of hotels', () => pm.expect(json.data).to.be.an('array').and.not.empty);",
+              "pm.environment.set('hotel_id', json.data[0].id);",
+              "console.log('Selected hotel', json.data[0].name, json.data[0].id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Available Rooms",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/hotels/{{hotel_id}}/rooms?checkin={{checkin}}&checkout={{checkout}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "hotels", "{{hotel_id}}", "rooms"],
+          "query": [
+            {"key": "checkin", "value": "{{checkin}}"},
+            {"key": "checkout", "value": "{{checkout}}"}
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Success true', () => pm.expect(json.success).to.eql(true));",
+              "pm.test('Has available rooms array', () => pm.expect(json.data.available_rooms).to.be.an('array'));",
+              "pm.test('Pick a room if available', () => { if (json.data.available_rooms.length>0) { pm.environment.set('room_id', json.data.available_rooms[0].id); } });",
+              "console.log('Selected room', pm.environment.get('room_id'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Booking",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userName\": \"{{guest_name}}\",\n  \"phone\": \"{{guest_phone}}\",\n  \"hotelId\": \"{{hotel_id}}\",\n  \"roomId\": \"{{room_id}}\",\n  \"checkIn\": \"{{checkin}}\",\n  \"checkOut\": \"{{checkout}}\"\n}"
+        },
+        "url": {"raw": "{{base_url}}/api/bookings", "host": ["{{base_url}}"], "path": ["api","bookings"]}
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Created 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.environment.set('booking_id', json.data.booking.id);",
+              "pm.environment.set('payment_id', json.data.payment.id);",
+              "console.log('Booking', json.data.booking.id, 'Payment', json.data.payment.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Initiate Payment",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"{{booking_id}}\",\n  \"provider\": \"{{provider}}\"\n}"
+        },
+        "url": {"raw": "{{base_url}}/api/payments/initiate", "host": ["{{base_url}}"], "path": ["api","payments","initiate"]}
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.environment.set('payment_id', json.data.payment.id);",
+              "pm.environment.set('provider_reference', json.data.payment.provider_reference);",
+              "console.log('Provider ref', json.data.payment.provider_reference);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment Callback (success)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"success\",\n  \"provider_reference\": \"{{provider_reference}}\",\n  \"transaction_id\": \"{{provider_reference}}\"\n}"
+        },
+        "url": {"raw": "{{base_url}}/api/payments/callback", "host": ["{{base_url}}"], "path": ["api","payments","callback"]}
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Callback success', () => pm.expect(json.success).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment Status",
+      "request": {
+        "method": "GET",
+        "url": {"raw": "{{base_url}}/api/payments/{{payment_id}}", "host": ["{{base_url}}"], "path": ["api","payments","{{payment_id}}"]}
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Payment status success', () => pm.expect(json.data.payment.status).to.eql('success'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" }
+  ]
+}
