@@ -4,6 +4,16 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+const interpretTruthy = (value: string | undefined) => {
+  if (!value) return false;
+  return ['1', 'true', 'yes', 'require'].includes(value.toLowerCase());
+};
+
+const shouldUseSSL = (value: string | undefined) => {
+  if (!value) return false;
+  return ['1', 'true', 'require'].includes(value.toLowerCase());
+};
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -11,12 +21,12 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASS || 'password',
   database: process.env.DB_NAME || 'eqabobackend',
-  synchronize: process.env.NODE_ENV === 'development', // Only in development
+  synchronize: interpretTruthy(process.env.TYPEORM_SYNC),
   logging: process.env.NODE_ENV === 'development',
   entities: entities,
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: shouldUseSSL(process.env.DB_SSL || process.env.PGSSLMODE) ? { rejectUnauthorized: false } : false,
 });
 
 export const initializeDatabase = async (): Promise<void> => {

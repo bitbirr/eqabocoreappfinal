@@ -10,17 +10,23 @@ dotenv.config();
 /**
  * Database configuration
  */
+// Normalize env var names between server and CLI/seeders
+const DB_USER = process.env.DB_USER || process.env.DB_USERNAME || 'postgres';
+const DB_PASS = process.env.DB_PASS || process.env.DB_PASSWORD || 'password';
+const DB_SSL = (process.env.DB_SSL || process.env.PGSSLMODE || '').toLowerCase();
+const useSSL = ['1', 'true', 'require'].includes(DB_SSL) || process.env.NODE_ENV === 'production';
+
 const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
+  username: DB_USER,
+  password: DB_PASS,
   database: process.env.DB_NAME || 'eqabo_hotel_booking',
   entities: entities,
   synchronize: process.env.NODE_ENV === 'development', // Only in development
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: useSSL ? { rejectUnauthorized: false } : false
 });
 
 /**

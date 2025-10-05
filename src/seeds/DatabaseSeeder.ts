@@ -23,14 +23,14 @@ export class DatabaseSeeder {
 
       // Seed data in order of dependencies
       const users = await this.seedUsers();
-      const hotels = await this.seedHotels(users);
-      const rooms = await this.seedRooms(hotels);
-      const bookings = await this.seedBookings(users, hotels, rooms);
-      const payments = await this.seedPayments(bookings);
-      await this.seedPaymentLogs(bookings);
+  const hotels = await this.seedHotels(users);
+  const rooms = await this.seedRooms(hotels);
+  const bookings = await this.seedBookings(users, hotels, rooms);
+  const payments = await this.seedPayments(bookings);
+  const paymentLogs = await this.seedPaymentLogs(bookings, payments);
 
       console.log('✅ Database seeding completed successfully!');
-      console.log(`📊 Seeded: ${users.length} users, ${hotels.length} hotels, ${rooms.length} rooms, ${bookings.length} bookings, ${payments.length} payments`);
+  console.log(`📊 Seeded: ${users.length} users, ${hotels.length} hotels, ${rooms.length} rooms, ${bookings.length} bookings, ${payments.length} payments, ${paymentLogs.length} payment logs`);
     } catch (error) {
       console.error('❌ Error during database seeding:', error);
       throw error;
@@ -43,9 +43,20 @@ export class DatabaseSeeder {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
 
+    let constraintsRelaxed = false;
+
     try {
-      // Disable foreign key checks temporarily
-      await queryRunner.query('SET session_replication_role = replica;');
+      // Disable foreign key checks temporarily (best effort; managed providers may block this)
+      try {
+        await queryRunner.query('SET session_replication_role = replica;');
+        constraintsRelaxed = true;
+      } catch (error: any) {
+        if (error?.code === '42501') {
+          console.warn('⚠️  Insufficient privileges to relax constraints; proceeding with standard deletes.');
+        } else {
+          throw error;
+        }
+      }
 
       // Clear tables in reverse order of dependencies
       await queryRunner.query('DELETE FROM payment_logs');
@@ -55,8 +66,9 @@ export class DatabaseSeeder {
       await queryRunner.query('DELETE FROM hotels');
       await queryRunner.query('DELETE FROM users');
 
-      // Re-enable foreign key checks
-      await queryRunner.query('SET session_replication_role = DEFAULT;');
+      if (constraintsRelaxed) {
+        await queryRunner.query('SET session_replication_role = DEFAULT;');
+      }
 
       console.log('✅ Existing data cleared');
     } finally {
@@ -112,25 +124,27 @@ export class DatabaseSeeder {
     const roomRepository = AppDataSource.getRepository(Room);
     const rooms: Room[] = [];
 
-    let roomIndex = 0;
-    for (const hotel of hotels) {
-      // Each hotel gets 3-4 rooms
-      const roomsPerHotel = Math.floor(seedRooms.length / hotels.length);
-      const startIndex = roomIndex;
-      const endIndex = Math.min(roomIndex + roomsPerHotel, seedRooms.length);
+    const hotelsByName = new Map(hotels.map(hotel => [hotel.name, hotel] as const));
+    let fallbackIndex = 0;
 
-      for (let i = startIndex; i < endIndex; i++) {
-        const roomData = seedRooms[i];
-        const room = roomRepository.create({
-          ...roomData,
-          hotel_id: hotel.id
-        });
-        
-        const savedRoom = await roomRepository.save(room);
-        rooms.push(savedRoom);
+    for (const roomData of seedRooms) {
+      const { hotelName, ...roomAttributes } = roomData as typeof roomData & { hotelName?: string };
+      const hotel = hotelName ? hotelsByName.get(hotelName) : undefined;
+
+      const targetHotel = hotel ?? hotels[fallbackIndex % hotels.length];
+      fallbackIndex++;
+
+      if (!targetHotel) {
+        continue;
       }
 
-      roomIndex = endIndex;
+      const room = roomRepository.create({
+        ...roomAttributes,
+        hotel_id: targetHotel.id
+      });
+
+      const savedRoom = await roomRepository.save(room);
+      rooms.push(savedRoom);
     }
 
     console.log(`✅ Seeded ${rooms.length} rooms`);
@@ -154,11 +168,20 @@ export class DatabaseSeeder {
 
       if (!hotel) continue;
 
+      const checkin = bookingData.checkin_date;
+      const checkout = bookingData.checkout_date;
+      const oneDayMs = 1000 * 60 * 60 * 24;
+      const nights = Math.max(1, Math.round((checkout.getTime() - checkin.getTime()) / oneDayMs));
+
+      const totalAmount = bookingData.total_amount ?? Number(room.price_per_night) * nights;
+
       const booking = bookingRepository.create({
         ...bookingData,
         user_id: customer.id,
         hotel_id: hotel.id,
-        room_id: room.id
+        room_id: room.id,
+        nights,
+        total_amount: totalAmount
       });
       
       const savedBooking = await bookingRepository.save(booking);
@@ -192,7 +215,7 @@ export class DatabaseSeeder {
     return payments;
   }
 
-  private async seedPaymentLogs(bookings: Booking[]): Promise<PaymentLog[]> {
+  private async seedPaymentLogs(bookings: Booking[], payments: Payment[]): Promise<PaymentLog[]> {
     console.log('📋 Seeding payment logs...');
     
     const paymentLogRepository = AppDataSource.getRepository(PaymentLog);
@@ -201,10 +224,16 @@ export class DatabaseSeeder {
     for (let i = 0; i < seedPaymentLogs.length && i < bookings.length; i++) {
       const logData = seedPaymentLogs[i];
       const booking = bookings[i];
+      const payment = payments.find(p => p.booking_id === booking.id);
+
+      if (!payment) {
+        continue;
+      }
 
       const paymentLog = paymentLogRepository.create({
         ...logData,
-        booking_id: booking.id
+        booking_id: booking.id,
+        payment_id: payment.id
       });
       
       const savedLog = await paymentLogRepository.save(paymentLog);
