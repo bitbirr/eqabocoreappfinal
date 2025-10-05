@@ -1,3 +1,5 @@
 node_modules
 .env.dev
 .env
+dist
+*.log
