@@ -40,7 +40,7 @@ async function startServer() {
     const port = appConfig.port;
     app.listen(port, () => {
       console.log(`🚀 ${appConfig.name} v${appConfig.version} is running on port ${port}`);
-      console.log(`📖 API Documentation: http://localhost:${port}/api/docs`);
+      console.log(`📖 API Documentation: http://localhost:${port}/api-docs`);
       console.log(`❤️  Health Check: http://localhost:${port}/api/health`);
       console.log(`🔐 Authentication endpoints:`);
       console.log(`   📝 Register: POST http://localhost:${port}/api/auth/register`);

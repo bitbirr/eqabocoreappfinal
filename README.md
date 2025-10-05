@@ -66,7 +66,7 @@ npm run dev
 curl http://localhost:3000/api/health
 
 # View API documentation
-open http://localhost:3000/api/docs
+open http://localhost:3000/api-docs
 ```
 
 ---
@@ -180,11 +180,44 @@ Payments:
   GET    /api/payments/:id       # Get payment status
 
 Documentation:
-  GET    /api/docs               # Swagger UI
+  GET    /api-docs               # Swagger UI
   GET    /api/health             # Health check
 ```
 
-**[View Full API Documentation](http://localhost:3000/api/docs)** (when server is running)
+**[View Full API Documentation](http://localhost:3000/api-docs)** (when server is running)
+
+### 📖 API Documentation
+
+The API is fully documented using **OpenAPI 3.0 (Swagger)**. The interactive documentation provides:
+
+- **Complete endpoint reference** with request/response examples
+- **Schema definitions** for all data models
+- **Try it out** functionality to test endpoints directly
+- **Authentication support** with JWT token management
+- **Error response** documentation
+
+#### Accessing the Documentation
+
+1. **Interactive Swagger UI**: Visit `http://localhost:3000/api-docs` when the server is running
+2. **OpenAPI Specification**: The spec is auto-generated from JSDoc comments in the code
+3. **Documentation Guide**: See [OpenAPI Guide](docs/OPENAPI_GUIDE.md) for detailed information
+
+#### Using the Interactive Documentation
+
+1. **Authorize**: Click the "Authorize" button and enter your JWT token
+2. **Explore Endpoints**: Browse endpoints organized by tags (Authentication, Hotels, Bookings, Payments)
+3. **Test Requests**: Use "Try it out" to send real API requests
+4. **View Responses**: See actual response schemas and examples
+
+#### Documentation Features
+
+- ✅ **15 API endpoints** fully documented
+- ✅ **11 data schemas** with examples
+- ✅ **4 endpoint categories** (Authentication, Hotels, Bookings, Payments)
+- ✅ **Request/response examples** for all endpoints
+- ✅ **Error handling** documentation
+- ✅ **Authentication flows** clearly explained
+- ✅ **Rate limiting** information included
 
 ---
 
@@ -334,7 +367,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **GitHub**: https://github.com/bitbirr/eqabocoreappfinal
 - **Email**: support@eqabo.com
-- **API Documentation**: http://localhost:3000/api/docs
+- **API Documentation**: http://localhost:3000/api-docs
 - **Issues**: https://github.com/bitbirr/eqabocoreappfinal/issues
 - **Discussions**: https://github.com/bitbirr/eqabocoreappfinal/discussions
 
