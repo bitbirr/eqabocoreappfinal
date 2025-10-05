@@ -1,9 +1,9 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
-
-export class InitialMigration1700000000000 implements MigrationInterface {
+// Note: Avoid importing from 'typeorm' here to keep runtime JS free of named imports
+// that can break under certain CJS/ESM loaders in production.
+export class InitialMigration1700000000000 {
   name = 'InitialMigration1700000000000';
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
+  public async up(queryRunner: any): Promise<void> {
     // Extensions
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
@@ -165,7 +165,7 @@ export class InitialMigration1700000000000 implements MigrationInterface {
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(queryRunner: any): Promise<void> {
     // Drop foreign key constraints
     await queryRunner.query(`ALTER TABLE "payment_logs" DROP CONSTRAINT IF EXISTS "FK_payment_logs_booking_id"`);
     await queryRunner.query(`ALTER TABLE "payment_logs" DROP CONSTRAINT IF EXISTS "FK_payment_logs_payment_id"`);
