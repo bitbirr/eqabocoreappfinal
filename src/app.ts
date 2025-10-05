@@ -37,7 +37,7 @@ export function createApp(dataSource: DataSource): express.Application {
   const userRepository = dataSource.getRepository(User);
 
   // Swagger UI Documentation
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Eqabo Hotel Booking API Documentation',
@@ -61,7 +61,7 @@ export function createApp(dataSource: DataSource): express.Application {
       success: true,
       message: 'Welcome to Eqabo Hotel Booking API',
       version: '1.0.0',
-      documentation: '/api/docs',
+      documentation: '/api-docs',
       health: '/api/health',
       authentication: {
         register: 'POST /api/auth/register',
