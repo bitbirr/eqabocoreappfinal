@@ -4,6 +4,8 @@ import { Booking, BookingStatus } from '../models/Booking';
 import { Payment, PaymentStatus, PaymentProvider } from '../models/Payment';
 import { PaymentLog } from '../models/PaymentLog';
 import { Room, RoomStatus } from '../models/Room';
+import { User } from '../models/User';
+import { FirebaseService } from '../services/FirebaseService';
 
 interface InitiatePaymentRequest {
   bookingId: string;
@@ -26,12 +28,16 @@ export class PaymentController {
   private paymentRepository: Repository<Payment>;
   private paymentLogRepository: Repository<PaymentLog>;
   private roomRepository: Repository<Room>;
+  private userRepository: Repository<User>;
+  private firebaseService: FirebaseService;
 
   constructor(dataSource: DataSource) {
     this.bookingRepository = dataSource.getRepository(Booking);
     this.paymentRepository = dataSource.getRepository(Payment);
     this.paymentLogRepository = dataSource.getRepository(PaymentLog);
     this.roomRepository = dataSource.getRepository(Room);
+    this.userRepository = dataSource.getRepository(User);
+    this.firebaseService = new FirebaseService();
   }
 
   /**
@@ -266,6 +272,24 @@ export class PaymentController {
 
         await queryRunner.commitTransaction();
 
+        // Update booking in Firestore (non-blocking)
+        this.updateBookingInFirestore(booking.id, BookingStatus.CONFIRMED).catch(err => {
+          console.error('Error updating booking in Firestore:', err);
+        });
+
+        // Send success notification (non-blocking)
+        if (booking.user.fcm_token) {
+          this.sendPaymentNotification(
+            booking.user.fcm_token,
+            booking.id,
+            'confirmed',
+            'Payment Successful!',
+            `Your booking at ${booking.hotel.name} has been confirmed. Confirmation #${booking.id.substr(-8).toUpperCase()}`
+          ).catch(err => {
+            console.error('Error sending payment notification:', err);
+          });
+        }
+
         // In a real implementation, you would send a receipt/confirmation email/SMS here
         res.status(200).json({
           success: true,
@@ -321,6 +345,24 @@ export class PaymentController {
         await queryRunner.manager.save(PaymentLog, paymentLog);
 
         await queryRunner.commitTransaction();
+
+        // Update booking in Firestore (non-blocking)
+        this.updateBookingInFirestore(booking.id, BookingStatus.CANCELLED).catch(err => {
+          console.error('Error updating booking in Firestore:', err);
+        });
+
+        // Send failure notification (non-blocking)
+        if (booking.user.fcm_token) {
+          this.sendPaymentNotification(
+            booking.user.fcm_token,
+            booking.id,
+            'cancelled',
+            'Payment Failed',
+            `Your payment for booking at ${booking.hotel.name} failed. The booking has been cancelled.`
+          ).catch(err => {
+            console.error('Error sending payment notification:', err);
+          });
+        }
 
         res.status(200).json({
           success: true,
@@ -409,5 +451,38 @@ export class PaymentController {
         error: 'INTERNAL_SERVER_ERROR'
       });
     }
+  }
+
+  /**
+   * Update booking status in Firestore
+   */
+  private async updateBookingInFirestore(
+    bookingId: string,
+    status: BookingStatus
+  ): Promise<void> {
+    await this.firebaseService.updateBookingInFirestore(bookingId, { status });
+  }
+
+  /**
+   * Send FCM notification for payment update
+   */
+  private async sendPaymentNotification(
+    fcmToken: string,
+    bookingId: string,
+    status: string,
+    title: string,
+    body: string
+  ): Promise<void> {
+    await this.firebaseService.sendNotification(
+      fcmToken,
+      {
+        type: 'payment_confirmation',
+        booking_id: bookingId,
+        status,
+        priority: 'high'
+      },
+      title,
+      body
+    );
   }
 }

@@ -36,6 +36,9 @@ export class User {
   })
   role!: UserRole;
 
+  @Column({ type: 'text', nullable: true })
+  fcm_token?: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 

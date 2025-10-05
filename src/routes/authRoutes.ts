@@ -423,6 +423,62 @@ export function createAuthRoutes(userRepository: Repository<User>): Router {
     authController.hotelOwnerOnly
   );
 
+  /**
+   * @swagger
+   * /api/auth/firebase:
+   *   post:
+   *     tags: [Authentication]
+   *     summary: Get Firebase custom token
+   *     description: Generate a Firebase custom token with role claims for the authenticated user
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Firebase token generated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Firebase custom token generated successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     customToken:
+   *                       type: string
+   *                       example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+   *                     userId:
+   *                       type: string
+   *                       example: "uuid-here"
+   *                     role:
+   *                       type: string
+   *                       example: "customer"
+   *                     expiresIn:
+   *                       type: string
+   *                       example: "1h"
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       503:
+   *         description: Firebase service unavailable
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.post('/firebase', 
+    authMiddleware,
+    authController.getFirebaseToken
+  );
+
   return router;
 }
 

@@ -2,12 +2,15 @@ import { Request, Response } from 'express';
 import { AuthService, RegisterRequest, LoginRequest } from '../services/AuthService';
 import { UserRole } from '../models/User';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { FirebaseService } from '../services/FirebaseService';
 
 export class AuthController {
   private authService: AuthService;
+  private firebaseService: FirebaseService;
 
   constructor(authService: AuthService) {
     this.authService = authService;
+    this.firebaseService = new FirebaseService();
   }
 
   /**
@@ -329,6 +332,105 @@ export class AuthController {
       res.status(500).json({
         success: false,
         error: 'Internal server error'
+      });
+    }
+  };
+
+  /**
+   * Generate Firebase custom token with role claims
+   * POST /api/auth/firebase
+   */
+  getFirebaseToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+        return;
+      }
+
+      // Check if Firebase is initialized
+      if (!this.firebaseService.isInitialized()) {
+        res.status(503).json({
+          success: false,
+          error: 'Firebase service is not available'
+        });
+        return;
+      }
+
+      // Create custom token with role claims
+      const customToken = await this.firebaseService.createCustomToken(
+        req.user.id,
+        req.user.role
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Firebase custom token generated successfully',
+        data: {
+          customToken,
+          userId: req.user.id,
+          role: req.user.role,
+          expiresIn: '1h'
+        }
+      });
+    } catch (error) {
+      console.error('Firebase token generation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate Firebase token'
+      });
+    }
+  };
+
+  /**
+   * Update user FCM token
+   * POST /api/users/fcm-token
+   */
+  updateFcmToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+        return;
+      }
+
+      const { fcmToken } = req.body;
+
+      if (!fcmToken) {
+        res.status(400).json({
+          success: false,
+          error: 'FCM token is required'
+        });
+        return;
+      }
+
+      // Update user's FCM token
+      const updated = await this.authService.updateFcmToken(req.user.id, fcmToken);
+
+      if (!updated) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to update FCM token'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'FCM token updated successfully',
+        data: {
+          userId: req.user.id
+        }
+      });
+    } catch (error) {
+      console.error('FCM token update error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update FCM token'
       });
     }
   };

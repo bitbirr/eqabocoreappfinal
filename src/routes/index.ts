@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../models/User';
 import { createAuthRoutes } from './authRoutes';
+import { createUserRoutes } from './userRoutes';
 import { createHotelRoutes } from './hotelRoutes';
 import { createBookingRoutes } from './bookingRoutes';
 import { createPaymentRoutes } from './paymentRoutes';
@@ -14,6 +15,9 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
 
   // Authentication routes
   router.use('/auth', createAuthRoutes(userRepository));
+
+  // User routes
+  router.use('/users', createUserRoutes(userRepository));
 
   // Hotel booking workflow routes
   router.use('/hotels', createHotelRoutes(dataSource));

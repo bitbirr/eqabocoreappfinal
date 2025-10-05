@@ -278,4 +278,20 @@ export class AuthService {
 
     return { isValid: true };
   }
+
+  /**
+   * Update user's FCM token
+   */
+  async updateFcmToken(userId: string, fcmToken: string): Promise<boolean> {
+    try {
+      const result = await this.userRepository.update(
+        { id: userId },
+        { fcm_token: fcmToken }
+      );
+      return result.affected !== undefined && result.affected > 0;
+    } catch (error) {
+      console.error('Update FCM token error:', error);
+      return false;
+    }
+  }
 }
