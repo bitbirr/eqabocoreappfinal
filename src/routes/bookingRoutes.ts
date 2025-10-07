@@ -25,8 +25,9 @@ import { BookingController } from '../controllers/BookingController';
  *         - guest_phone
  *       properties:
  *         room_id:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
  *           description: ID of the room to book
  *         check_in_date:
  *           type: string
@@ -156,8 +157,9 @@ export function createBookingRoutes(dataSource: DataSource): Router {
    *         name: id
    *         required: true
    *         schema:
-   *           type: integer
-   *           example: 1
+   *           type: string
+   *           format: uuid
+   *           example: "550e8400-e29b-41d4-a716-446655440000"
    *         description: Booking ID
    *     responses:
    *       200:
