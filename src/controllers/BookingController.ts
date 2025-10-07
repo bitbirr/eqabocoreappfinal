@@ -6,6 +6,7 @@ import { Booking, BookingStatus } from '../models/Booking';
 import { User, UserRole } from '../models/User';
 import { Payment, PaymentStatus, PaymentProvider } from '../models/Payment';
 import { PaymentLog } from '../models/PaymentLog';
+import { FirebaseService } from '../services/FirebaseService';
 
 interface CreateBookingRequest {
   userName: string;
@@ -23,6 +24,7 @@ export class BookingController {
   private userRepository: Repository<User>;
   private paymentRepository: Repository<Payment>;
   private paymentLogRepository: Repository<PaymentLog>;
+  private firebaseService: FirebaseService;
 
   constructor(dataSource: DataSource) {
     this.hotelRepository = dataSource.getRepository(Hotel);
@@ -31,6 +33,7 @@ export class BookingController {
     this.userRepository = dataSource.getRepository(User);
     this.paymentRepository = dataSource.getRepository(Payment);
     this.paymentLogRepository = dataSource.getRepository(PaymentLog);
+    this.firebaseService = new FirebaseService();
   }
 
   /**
@@ -227,6 +230,24 @@ export class BookingController {
 
       await queryRunner.commitTransaction();
 
+      // Sync booking to Firestore (non-blocking)
+      this.syncBookingToFirestore(savedBooking, user, hotel, room).catch(err => {
+        console.error('Error syncing booking to Firestore:', err);
+      });
+
+      // Send FCM notification to user (non-blocking)
+      if (user.fcm_token) {
+        this.sendBookingNotification(
+          user.fcm_token,
+          savedBooking.id,
+          'pending',
+          `Booking created for ${hotel.name}`,
+          `Your booking for ${nights} night(s) has been created. Total: ${totalAmount} ETB`
+        ).catch(err => {
+          console.error('Error sending FCM notification:', err);
+        });
+      }
+
       res.status(201).json({
         success: true,
         message: 'Booking created successfully. Room is temporarily locked pending payment.',
@@ -348,5 +369,79 @@ export class BookingController {
         error: 'INTERNAL_SERVER_ERROR'
       });
     }
+  }
+
+  /**
+   * Sync booking to Firestore
+   */
+  private async syncBookingToFirestore(
+    booking: Booking,
+    user: User,
+    hotel: Hotel,
+    room: Room
+  ): Promise<void> {
+    const bookingData = {
+      id: booking.id,
+      user_id: booking.user_id,
+      hotel_id: booking.hotel_id,
+      room_id: booking.room_id,
+      user: {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        phone: user.phone
+      },
+      hotel: {
+        id: hotel.id,
+        name: hotel.name,
+        location: hotel.location
+      },
+      room: {
+        id: room.id,
+        room_number: room.room_number,
+        room_type: room.room_type,
+        price_per_night: Number(room.price_per_night)
+      },
+      checkin_date: booking.checkin_date.toISOString(),
+      checkout_date: booking.checkout_date.toISOString(),
+      nights: booking.nights,
+      total_amount: Number(booking.total_amount),
+      status: booking.status,
+      created_at: booking.created_at.toISOString()
+    };
+
+    await this.firebaseService.syncBookingToFirestore(booking.id, bookingData);
+  }
+
+  /**
+   * Update booking status in Firestore
+   */
+  private async updateBookingStatusInFirestore(
+    bookingId: string,
+    status: BookingStatus
+  ): Promise<void> {
+    await this.firebaseService.updateBookingInFirestore(bookingId, { status });
+  }
+
+  /**
+   * Send FCM notification for booking update
+   */
+  private async sendBookingNotification(
+    fcmToken: string,
+    bookingId: string,
+    status: string,
+    title: string,
+    body: string
+  ): Promise<void> {
+    await this.firebaseService.sendNotification(
+      fcmToken,
+      {
+        type: 'booking_update',
+        booking_id: bookingId,
+        status,
+        priority: 'high'
+      },
+      title,
+      body
+    );
   }
 }

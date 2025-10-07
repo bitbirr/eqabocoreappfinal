@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../models/User';
 import { createAuthRoutes } from './authRoutes';
+import { createUserRoutes } from './userRoutes';
 import { createHotelRoutes } from './hotelRoutes';
 import { createBookingRoutes } from './bookingRoutes';
 import { createPaymentRoutes } from './paymentRoutes';
@@ -14,6 +15,9 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
 
   // Authentication routes
   router.use('/auth', createAuthRoutes(userRepository));
+
+  // User routes
+  router.use('/users', createUserRoutes(userRepository));
 
   // Hotel booking workflow routes
   router.use('/hotels', createHotelRoutes(dataSource));
@@ -46,8 +50,15 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
             'POST /refresh - Refresh JWT token (protected)',
             'POST /logout - Logout user (protected)',
             'GET /validate - Validate JWT token (protected)',
+            'POST /firebase - Get Firebase custom token with role claims (protected)',
             'GET /admin-only - Admin-only access (protected)',
             'GET /hotel-owner-only - Hotel owner-only access (protected)'
+          ]
+        },
+        users: {
+          basePath: '/api/users',
+          endpoints: [
+            'POST /fcm-token - Update FCM token for push notifications (protected)'
           ]
         },
         hotels: {
@@ -86,6 +97,19 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
         tokenExpiry: '7 days',
         supportedRoles: ['admin', 'hotel_owner']
       },
+      firebase: {
+        enabled: true,
+        features: [
+          'Custom token generation with role claims',
+          'FCM push notifications',
+          'Firestore real-time sync',
+          'High-priority booking updates'
+        ],
+        endpoints: [
+          'POST /api/auth/firebase - Get Firebase custom token',
+          'POST /api/users/fcm-token - Store FCM device token'
+        ]
+      },
       phoneFormat: {
         description: 'Ethiopian phone number format',
         examples: [
@@ -113,8 +137,10 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
         'POST /api/auth/refresh',
         'POST /api/auth/logout',
         'GET /api/auth/validate',
+        'POST /api/auth/firebase',
         'GET /api/auth/admin-only',
         'GET /api/auth/hotel-owner-only',
+        'POST /api/users/fcm-token',
         'GET /api/hotels?city=Addis',
         'GET /api/hotels/:id/rooms?checkin=2025-10-01&checkout=2025-10-03',
         'POST /api/bookings',
