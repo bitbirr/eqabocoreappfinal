@@ -27,6 +27,76 @@ describe('FirebaseService', () => {
         ).rejects.toThrow('Firebase is not initialized');
       }
     });
+
+    it('should throw error when userId is empty', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken('', 'customer')
+      ).rejects.toThrow('Invalid userId');
+    });
+
+    it('should throw error when userId is null', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken(null as any, 'customer')
+      ).rejects.toThrow('Invalid userId');
+    });
+
+    it('should throw error when userId is whitespace', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken('   ', 'customer')
+      ).rejects.toThrow('Invalid userId');
+    });
+
+    it('should throw error when role is empty', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken('test-user-id', '')
+      ).rejects.toThrow('Invalid role');
+    });
+
+    it('should throw error when role is null', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken('test-user-id', null as any)
+      ).rejects.toThrow('Invalid role');
+    });
+
+    it('should throw error when role is whitespace', async () => {
+      if (!firebaseService.isInitialized()) {
+        // Skip if not initialized
+        return;
+      }
+      await expect(
+        firebaseService.createCustomToken('test-user-id', '   ')
+      ).rejects.toThrow('Invalid role');
+    });
+
+    it('should return a non-empty string token when Firebase is initialized', async () => {
+      if (firebaseService.isInitialized()) {
+        const token = await firebaseService.createCustomToken('test-user-id', 'customer');
+        expect(token).toBeDefined();
+        expect(typeof token).toBe('string');
+        expect(token.length).toBeGreaterThan(0);
+        expect(token.trim()).toBe(token); // No leading/trailing whitespace
+      }
+    });
   });
 
   describe('sendNotification', () => {

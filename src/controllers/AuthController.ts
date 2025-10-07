@@ -343,27 +343,64 @@ export class AuthController {
   getFirebaseToken = async (req: Request, res: Response): Promise<void> => {
     try {
       if (!req.user) {
+        console.error('Firebase token request failed: No authenticated user');
         res.status(401).json({
           success: false,
-          error: 'Authentication required'
+          error: 'Authentication required',
+          message: 'Authentication required'
+        });
+        return;
+      }
+
+      // Validate user data
+      if (!req.user.id || !req.user.role) {
+        console.error('Firebase token request failed: Invalid user data', {
+          hasId: !!req.user.id,
+          hasRole: !!req.user.role
+        });
+        res.status(400).json({
+          success: false,
+          error: 'Invalid user data',
+          message: 'User ID and role are required'
         });
         return;
       }
 
       // Check if Firebase is initialized
       if (!this.firebaseService.isInitialized()) {
+        console.error('Firebase token request failed: Firebase service not initialized');
         res.status(503).json({
           success: false,
-          error: 'Firebase service is not available'
+          error: 'Firebase service is not available',
+          message: 'Firebase service is not available. Please contact support.'
         });
         return;
       }
+
+      console.log(`Generating Firebase custom token for user ${req.user.id} with role ${req.user.role}`);
 
       // Create custom token with role claims
       const customToken = await this.firebaseService.createCustomToken(
         req.user.id,
         req.user.role
       );
+
+      // Validate that the token was actually generated
+      if (!customToken || typeof customToken !== 'string' || customToken.trim() === '') {
+        console.error('Firebase token generation failed: Token is null or empty', {
+          userId: req.user.id,
+          tokenType: typeof customToken,
+          tokenLength: customToken ? customToken.length : 0
+        });
+        res.status(500).json({
+          success: false,
+          error: 'Failed to generate Firebase token',
+          message: 'Firebase token generation returned an invalid token'
+        });
+        return;
+      }
+
+      console.log(`Firebase custom token generated successfully for user ${req.user.id}, token length: ${customToken.length}`);
 
       res.status(200).json({
         success: true,
@@ -377,9 +414,18 @@ export class AuthController {
       });
     } catch (error) {
       console.error('Firebase token generation error:', error);
+      
+      // Log detailed error information
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+
       res.status(500).json({
         success: false,
-        error: 'Failed to generate Firebase token'
+        error: 'Failed to generate Firebase token',
+        message: error instanceof Error ? error.message : 'Internal server error while generating Firebase token'
       });
     }
   };
