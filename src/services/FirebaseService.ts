@@ -31,6 +31,7 @@ export class FirebaseService {
       if (admin.apps.length > 0) {
         this.app = admin.apps[0];
         this.initialized = true;
+        console.log('Firebase Admin SDK already initialized');
         return;
       }
 
@@ -39,9 +40,18 @@ export class FirebaseService {
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-      // If credentials are not available, log warning but don't fail
+      // If credentials are not available, log detailed warning but don't fail
       if (!projectId || !clientEmail || !privateKey) {
-        console.warn('Firebase credentials not configured. Firebase features will be disabled.');
+        console.warn('⚠️  Firebase credentials not configured. Firebase features will be disabled.');
+        console.warn('Missing Firebase environment variables:');
+        if (!projectId) console.warn('  - FIREBASE_PROJECT_ID');
+        if (!clientEmail) console.warn('  - FIREBASE_CLIENT_EMAIL');
+        if (!privateKey) console.warn('  - FIREBASE_PRIVATE_KEY');
+        console.warn('To enable Firebase features:');
+        console.warn('  1. Go to Firebase Console > Project Settings > Service Accounts');
+        console.warn('  2. Generate a new private key');
+        console.warn('  3. Set the environment variables in your .env file');
+        console.warn('  4. Restart the server');
         return;
       }
 
@@ -57,9 +67,20 @@ export class FirebaseService {
       });
 
       this.initialized = true;
-      console.log('Firebase Admin SDK initialized successfully');
+      console.log('✅ Firebase Admin SDK initialized successfully');
+      console.log(`   Project ID: ${projectId}`);
+      console.log(`   Client Email: ${clientEmail.substring(0, 30)}...`);
     } catch (error) {
-      console.error('Error initializing Firebase Admin SDK:', error);
+      console.error('❌ Error initializing Firebase Admin SDK:', error);
+      if (error instanceof Error) {
+        console.error('   Error message:', error.message);
+        console.error('   Error stack:', error.stack);
+      }
+      console.error('Please verify:');
+      console.error('  - Your Firebase service account credentials are correct');
+      console.error('  - The private key format includes proper line breaks (\\n)');
+      console.error('  - Your Firebase project exists and is active');
+      console.error('  - Network connectivity to https://firebase.googleapis.com');
     }
   }
 

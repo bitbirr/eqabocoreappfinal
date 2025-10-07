@@ -64,6 +64,7 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
         hotels: {
           basePath: '/api/hotels',
           endpoints: [
+            'GET /featured - Get featured hotels',
             'GET /?city=Addis - Search hotels by city',
             'GET /:id/rooms?checkin=2025-10-01&checkout=2025-10-03 - Get available rooms'
           ]
@@ -141,6 +142,7 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
         'GET /api/auth/admin-only',
         'GET /api/auth/hotel-owner-only',
         'POST /api/users/fcm-token',
+        'GET /api/hotels/featured',
         'GET /api/hotels?city=Addis',
         'GET /api/hotels/:id/rooms?checkin=2025-10-01&checkout=2025-10-03',
         'POST /api/bookings',

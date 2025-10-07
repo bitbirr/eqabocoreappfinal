@@ -92,6 +92,79 @@ export function createHotelRoutes(dataSource: DataSource): Router {
 
   /**
    * @swagger
+   * /api/hotels/featured:
+   *   get:
+   *     summary: Get featured hotels
+   *     description: Retrieve a list of featured hotels (most recent active hotels)
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 10
+   *           example: 10
+   *         description: Maximum number of featured hotels to return
+   *     responses:
+   *       200:
+   *         description: Featured hotels retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     hotels:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                             example: "550e8400-e29b-41d4-a716-446655440000"
+   *                           name:
+   *                             type: string
+   *                             example: "Skylight Hotel"
+   *                           location:
+   *                             type: string
+   *                             example: "Addis Ababa"
+   *                           description:
+   *                             type: string
+   *                             example: "Luxury hotel in the heart of the city"
+   *                           room_count:
+   *                             type: integer
+   *                             example: 15
+   *                           price_range:
+   *                             type: object
+   *                             properties:
+   *                               min:
+   *                                 type: number
+   *                                 example: 1500
+   *                               max:
+   *                                 type: number
+   *                                 example: 5000
+   *                     total:
+   *                       type: integer
+   *                       example: 10
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.get('/featured', (req, res) => hotelController.getFeaturedHotels(req, res));
+
+  /**
+   * @swagger
    * /api/hotels:
    *   get:
    *     summary: Search hotels by city
