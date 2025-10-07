@@ -16,6 +16,59 @@ export class HotelController {
   }
 
   /**
+   * Get featured hotels
+   * GET /api/hotels/featured
+   */
+  async getFeaturedHotels(req: Request, res: Response): Promise<void> {
+    try {
+      const { limit = 10 } = req.query;
+
+      // Get active hotels ordered by creation date (most recent first)
+      // In a real implementation, you might have a 'featured' or 'is_featured' column
+      const hotels = await this.hotelRepository.find({
+        where: {
+          status: HotelStatus.ACTIVE
+        },
+        relations: ['rooms'],
+        take: Number(limit),
+        order: {
+          created_at: 'DESC'
+        }
+      });
+
+      // Add room count and price range for each hotel
+      const featuredHotels = hotels.map(hotel => ({
+        id: hotel.id,
+        name: hotel.name,
+        location: hotel.location,
+        description: hotel.description,
+        status: hotel.status,
+        created_at: hotel.created_at,
+        room_count: hotel.rooms?.length || 0,
+        price_range: hotel.rooms?.length > 0 ? {
+          min: Math.min(...hotel.rooms.map(room => Number(room.price_per_night))),
+          max: Math.max(...hotel.rooms.map(room => Number(room.price_per_night)))
+        } : null
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: {
+          hotels: featuredHotels,
+          total: featuredHotels.length
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching featured hotels:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch featured hotels',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
    * Search hotels by city/location
    * GET /api/hotels?city=Addis
    */
