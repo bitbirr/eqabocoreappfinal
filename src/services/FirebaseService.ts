@@ -96,7 +96,19 @@ export class FirebaseService {
    */
   async createCustomToken(userId: string, role: string): Promise<string> {
     if (!this.initialized || !this.app) {
+      console.error('Cannot create custom token: Firebase is not initialized');
       throw new Error('Firebase is not initialized');
+    }
+
+    // Validate input parameters
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      console.error('Cannot create custom token: Invalid userId', { userId });
+      throw new Error('Invalid userId: must be a non-empty string');
+    }
+
+    if (!role || typeof role !== 'string' || role.trim() === '') {
+      console.error('Cannot create custom token: Invalid role', { role });
+      throw new Error('Invalid role: must be a non-empty string');
     }
 
     try {
@@ -105,12 +117,45 @@ export class FirebaseService {
         userId
       };
 
+      console.log('Creating Firebase custom token', { userId, role });
+
       // Create custom token with 1-hour expiration (handled by Firebase)
       const token = await admin.auth().createCustomToken(userId, customClaims);
+
+      // Validate the generated token
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        console.error('Firebase Admin SDK returned invalid token', {
+          userId,
+          tokenType: typeof token,
+          tokenValue: token
+        });
+        throw new Error('Firebase Admin SDK returned an invalid token');
+      }
+
+      console.log('Firebase custom token created successfully', {
+        userId,
+        tokenLength: token.length
+      });
+
       return token;
     } catch (error) {
       console.error('Error creating custom token:', error);
-      throw new Error('Failed to create Firebase custom token');
+      
+      // Log detailed error information
+      if (error instanceof Error) {
+        console.error('Token creation error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+
+      // Re-throw the error with more context
+      if (error instanceof Error && error.message.includes('Firebase')) {
+        throw error;
+      }
+      
+      throw new Error(`Failed to create Firebase custom token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
