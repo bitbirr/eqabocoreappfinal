@@ -231,8 +231,9 @@ export function createHotelRoutes(dataSource: DataSource): Router {
    *         name: id
    *         required: true
    *         schema:
-   *           type: integer
-   *           example: 1
+   *           type: string
+   *           format: uuid
+   *           example: "550e8400-e29b-41d4-a716-446655440000"
    *         description: Hotel ID
    *       - in: query
    *         name: checkin

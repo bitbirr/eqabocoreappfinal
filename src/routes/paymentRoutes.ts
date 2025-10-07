@@ -20,8 +20,9 @@ import { PaymentController } from '../controllers/PaymentController';
  *         - payment_provider
  *       properties:
  *         booking_id:
- *           type: integer
- *           example: 1
+ *           type: string
+ *           format: uuid
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
  *           description: ID of the booking to process payment for
  *         payment_provider:
  *           type: string
@@ -48,8 +49,9 @@ import { PaymentController } from '../controllers/PaymentController';
  *           type: object
  *           properties:
  *             payment_id:
- *               type: integer
- *               example: 1
+ *               type: string
+ *               format: uuid
+ *               example: "550e8400-e29b-41d4-a716-446655440000"
  *             payment_url:
  *               type: string
  *               format: uri
@@ -238,8 +240,9 @@ export function createPaymentRoutes(dataSource: DataSource): Router {
    *         name: id
    *         required: true
    *         schema:
-   *           type: integer
-   *           example: 1
+   *           type: string
+   *           format: uuid
+   *           example: "550e8400-e29b-41d4-a716-446655440000"
    *         description: Payment ID
    *     responses:
    *       200:
