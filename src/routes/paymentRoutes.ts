@@ -180,6 +180,51 @@ export function createPaymentRoutes(dataSource: DataSource): Router {
 
   /**
    * @swagger
+   * /api/payments/{id}/verify:
+   *   get:
+   *     summary: Verify payment status with gateway
+   *     description: Manually verify payment status by checking with the payment gateway
+   *     tags: [Payments]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Payment ID
+   *     responses:
+   *       200:
+   *         description: Payment verification completed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 message:
+   *                   type: string
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     payment:
+   *                       type: object
+   *                     verification:
+   *                       type: object
+   *                     booking:
+   *                       type: object
+   *       404:
+   *         description: Payment not found
+   *       422:
+   *         description: Verification failed
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/:id/verify', (req, res) => paymentController.verifyPayment(req, res));
+
+  /**
+   * @swagger
    * /api/payments/callback:
    *   post:
    *     summary: Handle payment callback from provider

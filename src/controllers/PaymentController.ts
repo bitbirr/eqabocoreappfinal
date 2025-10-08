@@ -6,6 +6,7 @@ import { PaymentLog } from '../models/PaymentLog';
 import { Room, RoomStatus } from '../models/Room';
 import { User } from '../models/User';
 import { FirebaseService } from '../services/FirebaseService';
+import { PaymentGatewayFactory } from '../services/payments';
 
 interface InitiatePaymentRequest {
   bookingId: string;
@@ -99,6 +100,36 @@ export class PaymentController {
         return;
       }
 
+      // Get payment gateway for the provider
+      const gateway = PaymentGatewayFactory.getGateway(provider);
+
+      // Prepare payment initiation request
+      const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+      const paymentRequest = {
+        amount: Number(booking.total_amount),
+        currency: 'ETB',
+        bookingId: bookingId,
+        customerEmail: booking.user.email,
+        customerPhone: booking.user.phone,
+        customerName: `${booking.user.first_name} ${booking.user.last_name}`,
+        callbackUrl: `${baseUrl}/api/payments/callback`,
+        returnUrl: `${baseUrl}/api/payments/success`,
+        description: `Hotel booking at ${booking.hotel.name} - Room ${booking.room.room_number}`
+      };
+
+      // Initiate payment with the gateway
+      const gatewayResponse = await gateway.initiatePayment(paymentRequest);
+
+      if (!gatewayResponse.success) {
+        await queryRunner.rollbackTransaction();
+        res.status(422).json({
+          success: false,
+          message: gatewayResponse.message || 'Failed to initiate payment with provider',
+          error: 'PAYMENT_GATEWAY_ERROR'
+        });
+        return;
+      }
+
       // Find existing payment for this booking
       let payment = await queryRunner.manager.findOne(Payment, {
         where: { booking_id: bookingId }
@@ -110,17 +141,15 @@ export class PaymentController {
           booking_id: bookingId,
           amount: booking.total_amount,
           provider,
-          status: PaymentStatus.PENDING
+          status: PaymentStatus.PENDING,
+          provider_reference: gatewayResponse.providerReference
         });
       } else {
         // Update existing payment
         payment.provider = provider;
         payment.status = PaymentStatus.PENDING;
+        payment.provider_reference = gatewayResponse.providerReference;
       }
-
-      // Generate a mock provider reference (in real implementation, this would come from the payment provider)
-      const providerReference = `${provider.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      payment.provider_reference = providerReference;
 
       const savedPayment = await queryRunner.manager.save(Payment, payment);
 
@@ -129,15 +158,13 @@ export class PaymentController {
         payment_id: savedPayment.id,
         booking_id: bookingId,
         action: 'PAYMENT_INITIATED',
-        details: `Payment initiated with ${provider} - Reference: ${providerReference}`
+        details: `Payment initiated with ${provider} - Reference: ${gatewayResponse.providerReference}`
       });
 
       await queryRunner.manager.save(PaymentLog, paymentLog);
 
       await queryRunner.commitTransaction();
 
-      // In a real implementation, you would integrate with the actual payment provider here
-      // For now, we'll return mock payment details
       res.status(200).json({
         success: true,
         message: 'Payment initiated successfully',
@@ -147,7 +174,7 @@ export class PaymentController {
             booking_id: bookingId,
             amount: Number(savedPayment.amount),
             provider,
-            provider_reference: providerReference,
+            provider_reference: gatewayResponse.providerReference,
             status: savedPayment.status,
             created_at: savedPayment.created_at
           },
@@ -163,11 +190,11 @@ export class PaymentController {
           },
           payment_instructions: {
             provider,
-            reference: providerReference,
+            reference: gatewayResponse.providerReference,
             amount: Number(savedPayment.amount),
-            callback_url: '/api/payments/callback',
-            // Mock payment URL (in real implementation, this would be the provider's payment URL)
-            payment_url: `https://mock-${provider}.com/pay?ref=${providerReference}&amount=${savedPayment.amount}`
+            callback_url: `${baseUrl}/api/payments/callback`,
+            payment_url: gatewayResponse.paymentUrl,
+            expires_at: gatewayResponse.expiresAt
           }
         }
       });
@@ -450,6 +477,170 @@ export class PaymentController {
       res.status(500).json({
         success: false,
         message: 'Internal server error while fetching payment status',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Verify payment with gateway
+   * GET /api/payments/:id/verify
+   */
+  async verifyPayment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const payment = await this.paymentRepository.findOne({
+        where: { id },
+        relations: ['booking', 'booking.user', 'booking.hotel', 'booking.room']
+      });
+
+      if (!payment) {
+        res.status(404).json({
+          success: false,
+          message: 'Payment not found',
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      if (!payment.provider_reference) {
+        res.status(400).json({
+          success: false,
+          message: 'Payment has no provider reference',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      // Get payment gateway for verification
+      const gateway = PaymentGatewayFactory.getGateway(payment.provider);
+
+      // Verify payment with the gateway
+      const verificationResult = await gateway.verifyPayment(payment.provider_reference);
+
+      // Log verification attempt
+      const paymentLog = this.paymentLogRepository.create({
+        payment_id: payment.id,
+        booking_id: payment.booking_id,
+        action: 'PAYMENT_VERIFIED',
+        details: `Verification result: ${verificationResult.status} - ${verificationResult.message || 'N/A'}`
+      });
+      await this.paymentLogRepository.save(paymentLog);
+
+      if (!verificationResult.success) {
+        res.status(422).json({
+          success: false,
+          message: verificationResult.message || 'Payment verification failed',
+          error: 'VERIFICATION_FAILED'
+        });
+        return;
+      }
+
+      // If status changed, update payment and booking
+      if (verificationResult.status !== payment.status) {
+        const queryRunner = this.paymentRepository.manager.connection.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+          if (verificationResult.status === 'success') {
+            payment.status = PaymentStatus.SUCCESS;
+            payment.booking.status = BookingStatus.CONFIRMED;
+            
+            await queryRunner.manager.save(Payment, payment);
+            await queryRunner.manager.save(Booking, payment.booking);
+
+            // Log status update
+            const updateLog = queryRunner.manager.create(PaymentLog, {
+              payment_id: payment.id,
+              booking_id: payment.booking_id,
+              action: 'PAYMENT_STATUS_UPDATED',
+              details: `Status updated to SUCCESS via verification - Transaction: ${verificationResult.transactionId}`
+            });
+            await queryRunner.manager.save(PaymentLog, updateLog);
+
+            await queryRunner.commitTransaction();
+
+            // Update Firestore and send notification (non-blocking)
+            this.updateBookingInFirestore(payment.booking_id, BookingStatus.CONFIRMED).catch(console.error);
+            
+            if (payment.booking.user.fcm_token) {
+              this.sendPaymentNotification(
+                payment.booking.user.fcm_token,
+                payment.id,
+                payment.booking_id,
+                'confirmed',
+                'Payment Verified!',
+                `Your booking at ${payment.booking.hotel.name} has been confirmed.`
+              ).catch(console.error);
+            }
+          } else if (verificationResult.status === 'failed') {
+            payment.status = PaymentStatus.FAILED;
+            payment.booking.status = BookingStatus.CANCELLED;
+            
+            await queryRunner.manager.save(Payment, payment);
+            await queryRunner.manager.save(Booking, payment.booking);
+            
+            // Release room
+            await queryRunner.manager.update(Room, payment.booking.room_id, {
+              status: RoomStatus.AVAILABLE
+            });
+
+            // Log status update
+            const updateLog = queryRunner.manager.create(PaymentLog, {
+              payment_id: payment.id,
+              booking_id: payment.booking_id,
+              action: 'PAYMENT_STATUS_UPDATED',
+              details: `Status updated to FAILED via verification`
+            });
+            await queryRunner.manager.save(PaymentLog, updateLog);
+
+            await queryRunner.commitTransaction();
+
+            // Update Firestore (non-blocking)
+            this.updateBookingInFirestore(payment.booking_id, BookingStatus.CANCELLED).catch(console.error);
+          } else {
+            await queryRunner.commitTransaction();
+          }
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        } finally {
+          await queryRunner.release();
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment verification completed',
+        data: {
+          payment: {
+            id: payment.id,
+            amount: Number(payment.amount),
+            provider: payment.provider,
+            provider_reference: payment.provider_reference,
+            status: payment.status,
+            transaction_id: verificationResult.transactionId
+          },
+          verification: {
+            gateway_status: verificationResult.status,
+            gateway_message: verificationResult.message,
+            verified_amount: verificationResult.amount,
+            paid_at: verificationResult.paidAt
+          },
+          booking: {
+            id: payment.booking.id,
+            status: payment.booking.status
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while verifying payment',
         error: 'INTERNAL_SERVER_ERROR'
       });
     }
