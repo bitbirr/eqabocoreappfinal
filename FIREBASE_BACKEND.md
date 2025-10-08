@@ -141,7 +141,8 @@ Authorization: Bearer <jwt_token>
     "type": "booking_update",
     "booking_id": "uuid",
     "status": "pending",
-    "priority": "high"
+    "priority": "high",
+    "action": "view_booking"
   }
 }
 ```
@@ -153,9 +154,11 @@ Authorization: Bearer <jwt_token>
   "body": "Your booking at Grand Hotel has been confirmed. Confirmation #ABCD1234",
   "data": {
     "type": "payment_confirmation",
+    "payment_id": "uuid",
     "booking_id": "uuid",
     "status": "confirmed",
-    "priority": "high"
+    "priority": "high",
+    "action": "view_receipt"
   }
 }
 ```
@@ -167,9 +170,11 @@ Authorization: Bearer <jwt_token>
   "body": "Your payment for booking at Grand Hotel failed. The booking has been cancelled.",
   "data": {
     "type": "payment_confirmation",
+    "payment_id": "uuid",
     "booking_id": "uuid",
     "status": "cancelled",
-    "priority": "high"
+    "priority": "high",
+    "action": "view_receipt"
   }
 }
 ```
@@ -184,7 +189,9 @@ Authorization: Bearer <jwt_token>
     "notification": {
       "channelId": "eqabo_critical",
       "priority": "max",
-      "sound": "default"
+      "sound": "default",
+      "defaultSound": true,
+      "defaultVibrateTimings": true
     }
   }
 }
@@ -195,7 +202,8 @@ Authorization: Bearer <jwt_token>
 {
   "apns": {
     "headers": {
-      "apns-priority": "10"
+      "apns-priority": "10",
+      "apns-push-type": "alert"
     },
     "payload": {
       "aps": {
@@ -204,6 +212,7 @@ Authorization: Bearer <jwt_token>
           "body": "..."
         },
         "sound": "default",
+        "badge": 1,
         "interruption-level": "time-sensitive"
       }
     }
