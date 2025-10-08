@@ -281,6 +281,7 @@ export class PaymentController {
         if (booking.user.fcm_token) {
           this.sendPaymentNotification(
             booking.user.fcm_token,
+            payment.id,
             booking.id,
             'confirmed',
             'Payment Successful!',
@@ -355,6 +356,7 @@ export class PaymentController {
         if (booking.user.fcm_token) {
           this.sendPaymentNotification(
             booking.user.fcm_token,
+            payment.id,
             booking.id,
             'cancelled',
             'Payment Failed',
@@ -466,8 +468,12 @@ export class PaymentController {
   /**
    * Send FCM notification for payment update
    */
+  /**
+   * Send FCM notification for payment update
+   */
   private async sendPaymentNotification(
     fcmToken: string,
+    paymentId: string,
     bookingId: string,
     status: string,
     title: string,
@@ -477,9 +483,11 @@ export class PaymentController {
       fcmToken,
       {
         type: 'payment_confirmation',
+        payment_id: paymentId,
         booking_id: bookingId,
         status,
-        priority: 'high'
+        priority: 'high',
+        action: 'view_receipt'
       },
       title,
       body
