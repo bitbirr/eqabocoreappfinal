@@ -96,6 +96,8 @@ Start here to find the right documentation for your needs.
 - **[Database Setup](DATABASE_SETUP.md)** - Database configuration and schema
 - **[Seeding Guide](SEEDING_GUIDE.md)** - Test data generation
 - **[Postman Workflow](postman/WORKFLOW-GUIDE.md)** - End-to-end testing with Postman
+- **[Firebase Integration](FIREBASE_BACKEND.md)** - Real-time updates and push notifications
+- **[Payment Gateway Integration](PAYMENT_GATEWAY_INTEGRATION.md)** - Chapa, TeleBirr, eBirr, Kaafi setup
 
 ---
 
@@ -130,11 +132,17 @@ Start here to find the right documentation for your needs.
 - Multi-status workflow (pending → confirmed → completed)
 
 ### 💳 Payment Processing
-- Multi-gateway support (Chapa, TeleBirr, eBirr, Kaafi)
-- Secure payment initiation
-- Webhook callbacks for confirmation
+- **Real payment gateway integrations** for all major Ethiopian providers
+- **Chapa**: Leading Ethiopian payment gateway
+- **TeleBirr**: Ethio Telecom's mobile money service
+- **eBirr (CBE Birr)**: Commercial Bank of Ethiopia's mobile payment
+- **Kaafi**: Ethiopian mobile payment solution
+- Secure payment initiation with provider checkout URLs
+- Webhook callbacks with signature verification
+- Payment verification endpoints for status checks
 - Complete transaction audit trail
-- Refund support
+- Real-time Firestore synchronization
+- Automatic FCM notifications on payment events
 
 ### 📊 Admin & Analytics
 - User and hotel management
@@ -175,8 +183,10 @@ Bookings:
   GET    /api/bookings/:id       # Get booking details
 
 Payments:
-  POST   /api/payments/initiate  # Initiate payment
-  POST   /api/payments/callback  # Payment callback
+  POST   /api/payments/initiate    # Initiate payment with gateway
+  POST   /api/payments/callback    # Payment webhook callback
+  GET    /api/payments/:id         # Get payment status
+  GET    /api/payments/:id/verify  # Verify payment with gateway
   GET    /api/payments/:id       # Get payment status
 
 Documentation:
@@ -211,13 +221,14 @@ The API is fully documented using **OpenAPI 3.0 (Swagger)**. The interactive doc
 
 #### Documentation Features
 
-- ✅ **15 API endpoints** fully documented
+- ✅ **16 API endpoints** fully documented
 - ✅ **11 data schemas** with examples
 - ✅ **4 endpoint categories** (Authentication, Hotels, Bookings, Payments)
 - ✅ **Request/response examples** for all endpoints
 - ✅ **Error handling** documentation
 - ✅ **Authentication flows** clearly explained
 - ✅ **Rate limiting** information included
+- ✅ **Payment gateway integration guide**
 
 ---
 
@@ -312,11 +323,34 @@ JWT_EXPIRES_IN=7d
 # Server
 PORT=3000
 NODE_ENV=development
+API_BASE_URL=http://localhost:3000
 
-# Payment (Optional for development)
-CHAPA_SECRET_KEY=test-key
-CHAPA_PUBLIC_KEY=test-key
+# Firebase (Optional - for real-time features)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Payment Gateways (Optional - configure as needed)
+# Chapa
+CHAPA_SECRET_KEY=your-chapa-secret-key
+CHAPA_API_URL=https://api.chapa.co/v1
+
+# TeleBirr
+TELEBIRR_APP_ID=your-telebirr-app-id
+TELEBIRR_APP_KEY=your-telebirr-app-key
+TELEBIRR_PUBLIC_KEY=your-telebirr-public-key
+
+# eBirr (CBE Birr)
+EBIRR_MERCHANT_ID=your-ebirr-merchant-id
+EBIRR_API_KEY=your-ebirr-api-key
+
+# Kaafi
+KAAFI_MERCHANT_CODE=your-kaafi-merchant-code
+KAAFI_API_KEY=your-kaafi-api-key
+KAAFI_SECRET_KEY=your-kaafi-secret-key
 ```
+
+See [`.env.example`](.env.example) for complete configuration options.
 
 ---
 
@@ -342,7 +376,9 @@ We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.
 - ✅ Complete authentication system
 - ✅ Hotel and room management
 - ✅ Booking workflow with validation
-- ✅ Payment gateway integration
+- ✅ **Real payment gateway integrations (Chapa, TeleBirr, eBirr, Kaafi)**
+- ✅ **Payment verification and webhook security**
+- ✅ **Firebase real-time updates and push notifications**
 - ✅ Comprehensive API documentation
 - ✅ Postman testing collections
 - ✅ Database seeding system
