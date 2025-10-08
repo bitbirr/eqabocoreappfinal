@@ -196,12 +196,15 @@ export class FirebaseService {
           notification: {
             channelId: isCritical ? 'eqabo_critical' : 'eqabo_default',
             priority: isCritical ? 'max' : 'default',
-            sound: 'default'
+            sound: 'default',
+            defaultSound: true,
+            defaultVibrateTimings: true
           }
         },
         apns: {
           headers: {
-            'apns-priority': isCritical ? '10' : '5'
+            'apns-priority': isCritical ? '10' : '5',
+            'apns-push-type': 'alert'
           },
           payload: {
             aps: {
@@ -210,6 +213,7 @@ export class FirebaseService {
                 body
               },
               sound: 'default',
+              badge: 1,
               'interruption-level': isCritical ? 'time-sensitive' : 'active'
             }
           }

@@ -438,7 +438,8 @@ export class BookingController {
         type: 'booking_update',
         booking_id: bookingId,
         status,
-        priority: 'high'
+        priority: 'high',
+        action: 'view_booking'
       },
       title,
       body
