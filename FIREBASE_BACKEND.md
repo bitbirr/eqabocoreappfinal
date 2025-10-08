@@ -56,12 +56,20 @@ Authorization: Bearer <jwt_token>
 Authorization: Bearer <jwt_token>
 ```
 
-**Request Body**:
+**Request Body** (supports both field name formats):
 ```json
 {
   "fcmToken": "fGxK7nHqRY6..."
 }
 ```
+Or alternatively:
+```json
+{
+  "fcm_token": "fGxK7nHqRY6..."
+}
+```
+
+**Note**: The API accepts both camelCase (`fcmToken`) and snake_case (`fcm_token`) field names for compatibility with different mobile app naming conventions.
 
 **Response**:
 ```json

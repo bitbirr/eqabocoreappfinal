@@ -29,7 +29,7 @@ export function createUserRoutes(userRepository: Repository<User>): Router {
    *   post:
    *     tags: [Users]
    *     summary: Update FCM token
-   *     description: Store or update the user's FCM token for push notifications
+   *     description: Store or update the user's FCM token for push notifications. Accepts both camelCase (fcmToken) and snake_case (fcm_token) field names.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -38,12 +38,18 @@ export function createUserRoutes(userRepository: Repository<User>): Router {
    *         application/json:
    *           schema:
    *             type: object
-   *             required:
-   *               - fcmToken
    *             properties:
    *               fcmToken:
    *                 type: string
    *                 example: "fGxK7nHqRY6..."
+   *                 description: "FCM device token (camelCase format)"
+   *               fcm_token:
+   *                 type: string
+   *                 example: "fGxK7nHqRY6..."
+   *                 description: "FCM device token (snake_case format, alternative)"
+   *             oneOf:
+   *               - required: [fcmToken]
+   *               - required: [fcm_token]
    *     responses:
    *       200:
    *         description: FCM token updated successfully
@@ -65,11 +71,21 @@ export function createUserRoutes(userRepository: Repository<User>): Router {
    *                       type: string
    *                       example: "uuid-here"
    *       400:
-   *         description: Bad request - FCM token missing
+   *         description: Bad request - FCM token missing or invalid
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Error'
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *                   example: "FCM token is required"
+   *                 message:
+   *                   type: string
+   *                   example: "Please provide either \"fcmToken\" or \"fcm_token\" field in the request body"
    *       401:
    *         description: Unauthorized - Invalid or missing token
    *         content:

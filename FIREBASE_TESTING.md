@@ -63,7 +63,7 @@ curl -X POST http://localhost:3000/api/auth/firebase \
 
 **Endpoint**: `POST /api/users/fcm-token`
 
-**Test**:
+**Test** (camelCase format):
 ```bash
 curl -X POST http://localhost:3000/api/users/fcm-token \
   -H "Content-Type: application/json" \
@@ -72,6 +72,18 @@ curl -X POST http://localhost:3000/api/users/fcm-token \
     "fcmToken": "fGxK7nHqRY6vZ8hC3mN1pQrS9tUvWxYz2aBcDeFgHiJkLmNoPqRsTuVwXyZ0"
   }'
 ```
+
+**Alternative Test** (snake_case format - for mobile app compatibility):
+```bash
+curl -X POST http://localhost:3000/api/users/fcm-token \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "fcm_token": "fGxK7nHqRY6vZ8hC3mN1pQrS9tUvWxYz2aBcDeFgHiJkLmNoPqRsTuVwXyZ0"
+  }'
+```
+
+**Note**: The API accepts both `fcmToken` (camelCase) and `fcm_token` (snake_case) field names.
 
 **Expected Response**:
 ```json

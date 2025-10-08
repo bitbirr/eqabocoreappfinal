@@ -444,12 +444,15 @@ export class AuthController {
         return;
       }
 
-      const { fcmToken } = req.body;
+      // Support both camelCase (fcmToken) and snake_case (fcm_token) field names
+      const fcmToken = req.body.fcmToken || req.body.fcm_token;
 
       if (!fcmToken) {
+        console.error('FCM token validation failed. Request body:', JSON.stringify(req.body));
         res.status(400).json({
           success: false,
-          error: 'FCM token is required'
+          error: 'FCM token is required',
+          message: 'Please provide either "fcmToken" or "fcm_token" field in the request body'
         });
         return;
       }
