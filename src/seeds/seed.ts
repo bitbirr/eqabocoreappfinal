@@ -4,6 +4,7 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { AppDataSource } from '../config/database';
 import { DatabaseSeeder } from './DatabaseSeeder';
+import { CityHotelRoomSeeder } from './CityHotelRoomSeeder';
 
 // Load environment variables
 dotenv.config({ path: '.env.dev' });
@@ -18,8 +19,9 @@ async function runSeeding() {
     await AppDataSource.initialize();
     console.log('✅ Database connected successfully');
 
-    // Get seeder instance
+    // Get seeder instances
     const seeder = DatabaseSeeder.getInstance();
+    const citySeeder = CityHotelRoomSeeder.getInstance();
 
     // Check command line arguments
     const args = process.argv.slice(2);
@@ -32,17 +34,36 @@ async function runSeeding() {
       case 'hotels':
         await seeder.seedHotelsOnly();
         break;
+      case 'cities':
+        await citySeeder.seedAll();
+        const citySummary = await citySeeder.getSeededDataSummary();
+        console.log('');
+        console.log('📊 City-Hotel-Room Summary:');
+        console.log('===========================');
+        console.log(`🏙️  Cities: ${citySummary.cities}`);
+        console.log(`🏨 Hotels: ${citySummary.hotels}`);
+        console.log(`🛏️ Rooms: ${citySummary.rooms}`);
+        console.log(`📈 Total Records: ${citySummary.total}`);
+        break;
       case 'summary':
         const summary = await seeder.getSeededDataSummary();
+        const citiesSummary = await citySeeder.getSeededDataSummary();
         console.log('📊 Current Database Summary:');
         console.log('============================');
+        console.log('Legacy Data:');
         console.log(`👥 Users: ${summary.users}`);
         console.log(`🏨 Hotels: ${summary.hotels}`);
         console.log(`🛏️ Rooms: ${summary.rooms}`);
         console.log(`📅 Bookings: ${summary.bookings}`);
         console.log(`💳 Payments: ${summary.payments}`);
         console.log(`📋 Payment Logs: ${summary.paymentLogs}`);
-        console.log(`📈 Total Records: ${summary.total}`);
+        console.log(`📈 Total Legacy Records: ${summary.total}`);
+        console.log('');
+        console.log('City-Hotel-Room Data:');
+        console.log(`🏙️  Cities: ${citiesSummary.cities}`);
+        console.log(`🏨 Hotels: ${citiesSummary.hotels}`);
+        console.log(`🛏️ Rooms: ${citiesSummary.rooms}`);
+        console.log(`📈 Total City Records: ${citiesSummary.total}`);
         break;
       case 'all':
       default:
