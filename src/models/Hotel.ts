@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Index, Generated } from 'typeorm';
 import { User } from './User';
 import { Room } from './Room';
 import { Booking } from './Booking';
@@ -14,7 +14,8 @@ export enum HotelStatus {
 @Entity('hotels')
 @Index('idx_hotels_city', ['cityId'])
 export class Hotel {
-  @PrimaryGeneratedColumn('increment')
+  @Column({ type: 'integer', nullable: true })
+  @Generated('increment')
   hotelId!: number;
 
   @PrimaryGeneratedColumn('uuid')

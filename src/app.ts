@@ -7,7 +7,7 @@ import { specs, swaggerUi } from './config/swagger';
 /**
  * Create and configure Express application with authentication
  */
-export function createApp(dataSource: DataSource): express.Application {
+export function createApp(dataSource: DataSource): express.Express {
   const app = express();
 
   // Middleware

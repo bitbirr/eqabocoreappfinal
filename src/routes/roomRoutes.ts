@@ -114,7 +114,7 @@ export function createRoomRoutes(dataSource: DataSource): Router {
    *       500:
    *         description: Internal server error
    */
-  router.post('/:hotelId/rooms', (req, res) => roomController.createRoom(req, res));
+  router.post('/hotels/:hotelId/rooms', (req, res) => roomController.createRoom(req, res));
 
   /**
    * @swagger
@@ -185,7 +185,7 @@ export function createRoomRoutes(dataSource: DataSource): Router {
    *       500:
    *         description: Internal server error
    */
-  router.get('/:hotelId/rooms', (req, res) => roomController.getRoomsByHotel(req, res));
+  router.get('/hotels/:hotelId/rooms', (req, res) => roomController.getRoomsByHotel(req, res));
 
   /**
    * @swagger

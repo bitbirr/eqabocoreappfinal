@@ -11,5 +11,9 @@ module.exports = {
     '!src/**/*.d.ts',
   ],
   moduleFileExtensions: ['ts', 'js', 'json'],
+  // Increase default per-test timeout to accommodate DB setup and API calls
+  testTimeout: 60000,
+  // Run tests sequentially to avoid database connection contention across suites
+  maxWorkers: 1,
   verbose: true,
 };

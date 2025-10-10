@@ -1,5 +1,17 @@
-import * as admin from 'firebase-admin';
-import { ServiceAccount } from 'firebase-admin';
+// Soft-load firebase-admin to allow running without Firebase during tests/dev
+let admin: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  admin = require('firebase-admin');
+} catch {
+  admin = null;
+}
+
+type ServiceAccount = {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+};
 
 export interface FirebaseCustomClaims {
   role: string;
@@ -15,7 +27,7 @@ export interface FCMNotificationPayload {
 }
 
 export class FirebaseService {
-  private app: admin.app.App | null = null;
+  private app: any | null = null;
   private initialized: boolean = false;
 
   constructor() {
@@ -28,7 +40,7 @@ export class FirebaseService {
   private initialize(): void {
     try {
       // Check if Firebase is already initialized
-      if (admin.apps.length > 0) {
+      if (admin && admin.apps && admin.apps.length > 0) {
         this.app = admin.apps[0];
         this.initialized = true;
         console.log('Firebase Admin SDK already initialized');
@@ -41,6 +53,11 @@ export class FirebaseService {
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
       // If credentials are not available, log detailed warning but don't fail
+      if (!admin) {
+        console.warn('⚠️  firebase-admin not installed. Firebase features disabled.');
+        return;
+      }
+
       if (!projectId || !clientEmail || !privateKey) {
         console.warn('⚠️  Firebase credentials not configured. Firebase features will be disabled.');
         console.warn('Missing Firebase environment variables:');
@@ -95,7 +112,7 @@ export class FirebaseService {
    * Create a custom Firebase token with role claims
    */
   async createCustomToken(userId: string, role: string): Promise<string> {
-    if (!this.initialized || !this.app) {
+    if (!this.initialized || !this.app || !admin) {
       console.error('Cannot create custom token: Firebase is not initialized');
       throw new Error('Firebase is not initialized');
     }
@@ -168,7 +185,7 @@ export class FirebaseService {
     title: string,
     body: string
   ): Promise<boolean> {
-    if (!this.initialized || !this.app) {
+    if (!this.initialized || !this.app || !admin) {
       console.warn('Firebase is not initialized, skipping notification');
       return false;
     }
@@ -177,7 +194,7 @@ export class FirebaseService {
       const isCritical = data.type === 'booking_update' || 
                          data.type === 'payment_confirmation';
 
-      const message: admin.messaging.Message = {
+      const message: any = {
         token: fcmToken,
         data: {
           ...data,
@@ -233,7 +250,7 @@ export class FirebaseService {
    * Sync booking to Firestore
    */
   async syncBookingToFirestore(bookingId: string, bookingData: any): Promise<boolean> {
-    if (!this.initialized || !this.app) {
+    if (!this.initialized || !this.app || !admin) {
       console.warn('Firebase is not initialized, skipping Firestore sync');
       return false;
     }
@@ -260,7 +277,7 @@ export class FirebaseService {
    * Update booking status in Firestore
    */
   async updateBookingInFirestore(bookingId: string, updates: any): Promise<boolean> {
-    if (!this.initialized || !this.app) {
+    if (!this.initialized || !this.app || !admin) {
       console.warn('Firebase is not initialized, skipping Firestore update');
       return false;
     }

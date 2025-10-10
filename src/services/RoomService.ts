@@ -57,9 +57,11 @@ export class RoomService {
       throw new Error(`Room number "${roomNumber}" already exists in this hotel`);
     }
 
-    // Create room
+    // Create room (populate both v1 and legacy fields)
     const room = this.roomRepository.create({
       hotelId,
+      // legacy join uses hotel.uuid id; set it to keep NOT NULL satisfied
+      hotel_id: hotel.id,
       roomNumber,
       roomType,
       price,

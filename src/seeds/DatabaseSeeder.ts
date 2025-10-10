@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/database';
-import { User, Hotel, Room, Booking, Payment, PaymentLog } from '../models';
+import { User, Hotel, Room, Booking, Payment, PaymentLog, City, RoomType } from '../models';
 import { seedUsers, seedHotels, seedRooms, seedBookings, seedPayments, seedPaymentLogs } from './data/seedData';
 
 export class DatabaseSeeder {
@@ -92,11 +92,28 @@ export class DatabaseSeeder {
     return users;
   }
 
+  private async ensureDefaultCity(): Promise<City> {
+    const cityRepo = AppDataSource.getRepository(City);
+    // If any city exists, reuse the first one
+    const existing = await cityRepo.find({ take: 1, order: { cityId: 'ASC' as any } as any });
+    if (existing.length > 0) return existing[0];
+
+    // Otherwise create a minimal default city
+    const defaultCity = cityRepo.create({
+      cityName: 'Addis Ababa',
+      gps: '9.03,38.74',
+    });
+    return await cityRepo.save(defaultCity);
+  }
+
   private async seedHotels(users: User[]): Promise<Hotel[]> {
     console.log('🏨 Seeding hotels...');
     
     const hotelRepository = AppDataSource.getRepository(Hotel);
     const hotels: Hotel[] = [];
+
+    // Ensure we have at least one city for FK (cityId NOT NULL)
+    const defaultCity = await this.ensureDefaultCity();
 
     // Get hotel owners (users with HOTEL_OWNER role)
     const hotelOwners = users.filter(user => user.role === 'hotel_owner');
@@ -105,9 +122,18 @@ export class DatabaseSeeder {
       const hotelData = seedHotels[i];
       const owner = hotelOwners[i % hotelOwners.length]; // Cycle through owners
 
+      // Populate both legacy and v1 fields to satisfy NOT NULL constraints
       const hotel = hotelRepository.create({
-        ...hotelData,
-        owner_id: owner.id
+        // New/v1 columns
+        cityId: defaultCity.cityId,
+        hotelName: hotelData.name,
+        address: hotelData.location,
+        // Legacy columns for backward compatibility
+        name: hotelData.name,
+        location: hotelData.location,
+        description: hotelData.description,
+        status: hotelData.status,
+        owner_id: owner.id,
       });
       
       const savedHotel = await hotelRepository.save(hotel);
@@ -138,9 +164,26 @@ export class DatabaseSeeder {
         continue;
       }
 
+      // Map free-text room_type to enum RoomType
+      const roomTypeText = String((roomAttributes as any).room_type || '')?.toLowerCase();
+      let mappedType: RoomType = RoomType.SINGLE;
+      if (roomTypeText.includes('double')) mappedType = RoomType.DOUBLE;
+      else if (roomTypeText.includes('suite')) mappedType = RoomType.SUITE;
+
       const room = roomRepository.create({
-        ...roomAttributes,
-        hotel_id: targetHotel.id
+        // New/v1 fields
+        hotelId: targetHotel.hotelId,
+        roomNumber: (roomAttributes as any).room_number,
+        roomType: mappedType,
+        price: (roomAttributes as any).price_per_night,
+        // Legacy fields for backward compatibility
+        room_number: (roomAttributes as any).room_number,
+        room_type: (roomAttributes as any).room_type,
+        price_per_night: (roomAttributes as any).price_per_night,
+        description: (roomAttributes as any).description,
+        status: (roomAttributes as any).status,
+        // Legacy relation (UUID FK)
+        hotel_id: targetHotel.id,
       });
 
       const savedRoom = await roomRepository.save(room);

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Index, Generated } from 'typeorm';
 import { Hotel } from './Hotel';
 import { Booking } from './Booking';
 
@@ -20,7 +20,8 @@ export enum RoomStatus {
 @Entity('rooms')
 @Index('idx_rooms_hotel', ['hotelId'])
 export class Room {
-  @PrimaryGeneratedColumn('increment')
+  @Column({ type: 'integer', nullable: true })
+  @Generated('increment')
   roomId!: number;
 
   @PrimaryGeneratedColumn('uuid')
@@ -73,7 +74,7 @@ export class Room {
 
   // Relations
   @ManyToOne(() => Hotel, hotel => hotel.rooms)
-  @JoinColumn({ name: 'hotelId' })
+  @JoinColumn({ name: 'hotelId', referencedColumnName: 'hotelId' })
   hotel!: Hotel;
 
   @OneToMany(() => Booking, booking => booking.room)

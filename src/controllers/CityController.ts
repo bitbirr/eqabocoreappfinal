@@ -40,7 +40,11 @@ export class CityController {
         return;
       }
 
-      if (error.message.includes('required') || error.message.includes('Invalid GPS')) {
+      if (
+        error.message.includes('required') ||
+        error.message.includes('Invalid GPS') ||
+        error.message.includes('must not exceed')
+      ) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -177,7 +181,11 @@ export class CityController {
         return;
       }
 
-      if (error.message.includes('already exists') || error.message.includes('Invalid GPS')) {
+      if (
+        error.message.includes('already exists') ||
+        error.message.includes('Invalid GPS') ||
+        error.message.includes('must not exceed')
+      ) {
         res.status(400).json({
           success: false,
           message: error.message,

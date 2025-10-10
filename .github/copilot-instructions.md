@@ -1,32 +1,43 @@
 # Eqabo Copilot Instructions
 
 ## Quick orientation
-- API-first hotel booking backend built with Express 5 + TypeScript, authenticated by JWT and persisted via PostgreSQL/TypeORM (`src/app.ts`, `src/server.ts`).
-- Layered flow: routes create controllers, controllers delegate to services or repositories, and entities live in `src/models` where enums codify status/roles.
-- Swagger/OpenAPI docs are embedded directly in the route files (see `src/routes/authRoutes.ts`); keep annotations in sync when adding endpoints.
+- Express 5 + TypeScript API authenticated by JWT; runtime persistence is PostgreSQL via TypeORM (`src/app.ts`, `src/server.ts`, `src/models/**`).
+- Route factories create controllers and receive a shared TypeORM `DataSource`/repositories (see `src/routes/index.ts`, `src/controllers/**`). Keep DI: resolve repos from the passed `dataSource`, not from a global.
+- Swagger JSDoc lives in route files (e.g., `src/routes/authRoutes.ts`); Swagger UI is served at `/api-docs` (config in `src/config/swagger.ts`).
 
 ## Local dev workflow
-- Install deps with `npm install`, copy `.env.example` to `.env.dev`, then start the API with `npm run dev` (ts-node) or build with `npm run build` + `npm start` from `dist/`.
-- Database setup uses TypeORM; run `npm run migration:run` before seeding. Two seed paths exist: the JS shortcut `npm run seed` (raw SQL) and the TypeScript orchestrator `ts-node src/seeds/seed.ts [all|users|hotels|summary]` which clears tables via `session_replication_role`.
-- Jest is wired via `npm test` but the suite is currently empty; for regression coverage prefer Supertest-based API specs in `__tests__` aligned with the Postman flows in `postman/`.
+- Setup: `npm install`, copy `.env.example` to `.env.dev`. Run dev with `npm run dev` (ts-node) or build+start with `npm run build` then `npm start`.
+- Migrations (TypeORM CLI): `npm run migration:run` (uses `ormconfig.ts`). Run before tests/seed.
+- Seeding options: `npm run seed` (JS raw SQL) or `ts-node src/seeds/seed.ts [all|users|hotels|cities|summary]` (uses `session_replication_role` and summarises counts). Both load `.env.dev`.
+- Tests: Jest + Supertest under `__tests__/`. They boot a real `AppDataSource`; ensure DB is up and migrations applied. Useful scripts: `npm test`, `npm test:watch`, smoke tests via Postman `npm run test:smoke` (runs `scripts/run-newman.ps1`).
 
-## Persistence patterns
-- `createApp` receives a live `DataSource` and passes it into routers so each controller can resolve repositories from the same connection; when writing new handlers, grab repositories off `dataSource.getRepository(Model)`.
-- Entities aggregate through `src/models/index.ts`; add new tables there so both the runtime DataSource and CLI migrations pick them up.
-- Env vars are read under two naming schemes: `DB_USER/DB_PASS` in `src/config/database.ts` and `DB_USERNAME/DB_PASSWORD` in `src/server.ts`. Set both pairs (or update config) to avoid mismatches when switching between ts-node dev and built binaries.
+## Persistence and config
+- Active ORM: TypeORM. Entities are exported from `src/models/index.ts`; add new entities there so the runtime and CLI pick them up. Migrations live in `src/migrations/`.
+- Drizzle schema exists (`src/db/**`, `drizzle.config.ts`, `drizzle/`) for future/ops use but is not wired into request handling. Don’t mix unless you explicitly add adapters.
+- Env variable nuances: server normalizes both naming schemes. Set both to be safe:
+	- `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASS` (used by `src/config/database.ts` and seeders)
+	- Or `DB_USERNAME/DB_PASSWORD` (also accepted by `src/server.ts`)
+	- SSL: `DB_SSL`/`PGSSLMODE` truthy enables `ssl: { rejectUnauthorized: false }`.
+- Note defaults differ: `server.ts` default DB=`eqabo_hotel_booking`, `config/database.ts` default DB=`eqabobackend`. Provide `DB_NAME` to avoid surprises.
 
-## Domain rules to respect
-- Phone numbers must be validated/normalized with `validateEthiopianPhone` before persisting or authenticating (`src/utils/phoneValidation.ts`); AuthService relies on the normalized `+251` format to de-duplicate records.
-- User roles are restricted to `admin`, `hotel_owner`, and `customer`; the MVP registration flow only allows admin/hotel owners, while guest bookings auto-provision `customer` users with stubbed passwords.
-- Booking creation (`BookingController.createBooking`) uses a manual `QueryRunner` transaction to lock rooms and guard against double bookings; keep related updates inside the same transaction if you expand the workflow.
-- Payment initiation and callbacks (`PaymentController`) log every state change in `payment_logs`; follow that pattern when adding providers to preserve the audit trail.
+## Domain rules and patterns
+- Phone numbers must be normalized to `+251XXXXXXXXX` using `validateEthiopianPhone` (`src/utils/phoneValidation.ts`). Example: `const {normalizedPhone} = validateEthiopianPhone(input).` Auth and dedup rely on this.
+- Roles: `admin`, `hotel_owner`, `customer`. Registration allows admin/hotel_owner; guest bookings auto-provision `customer` with stubbed password.
+- Transactions: booking creation and payments use manual `QueryRunner` transactions (see `BookingController.createBooking`, `PaymentController`). Lock room to OCCUPIED on booking; CONFIRMED on payment success; release to AVAILABLE on failure.
+- Audit trail: write a `PaymentLog` row for every significant action (`payment_logs`), e.g., `PAYMENT_INITIATED`, `PAYMENT_SUCCESS`, `PAYMENT_FAILED`, `BOOKING_CREATED`.
+- Firebase (optional): `FirebaseService` supports custom tokens and FCM; guarded when envs missing. Endpoints: `/api/auth/firebase`, `/api/users/fcm-token`.
 
 ## API surface
-- Main router in `src/routes/index.ts` mounts `/auth`, `/hotels`, `/bookings`, and `/payments`; expose new domains by creating a route factory and registering it there.
-- For public docs, `/api/docs` serves Swagger UI via `src/config/swagger.ts`. Update the swagger spec when adding enums/response shapes so the explorer stays accurate.
-- Health checks live at `/api/health`; keep responses lightweight because deployment pipelines and Postman smoke tests pin to that contract.
+- Base router mounted at `/api` (`src/routes/index.ts`). Legacy workflow: `/auth`, `/users`, `/hotels`, `/bookings`, `/payments`.
+- New CRUD v1 surface under `/api/v1`: `/cities`, `/cities/:cityId/hotels`, `/hotels/:hotelId/rooms`, as well as `/hotels/:hotelId` and `/rooms/:roomId` resources.
+- Health: `GET /api/health` (keep lightweight). Docs: `/api-docs` for Swagger UI; `GET /api/docs` returns an overview JSON.
 
-## Helpful references
-- `DATABASE_SETUP.md` and `docs/DEVELOPER_GUIDE.md` document full onboarding, seeding strategies, and npm script matrix.
-- `SEEDING_GUIDE.md` explains fixture expectations and idempotency tricks; align new seed data with those helpers before running automated smoke tests.
-- For workflow examples, check `postman/WORKFLOW-GUIDE.md` and the collection JSONs—they mirror the booking/payment happy path the business team verifies.
+## How to add features (concrete pattern)
+- Create a route factory `createXRoutes(dataSource)` in `src/routes/` with Swagger JSDoc. Register it in `src/routes/index.ts` under `/api` or `/api/v1`.
+- In controllers, obtain repos via `dataSource.getRepository(Entity)` from the DI’d instance. Log state changes to `payment_logs` when touching payments/booking status.
+- Update enums or entities in `src/models/**` and export via `src/models/index.ts`; generate a migration (`npm run migration:generate`). Keep JSDoc schemas in sync.
+
+## References
+- Onboarding and DB: `DATABASE_SETUP.md`, `docs/DEVELOPER_GUIDE.md`.
+- Seeding details and volumes: `SEEDING_GUIDE.md`, seeders in `src/seeds/**` and `scripts/seed.js`.
+- API walkthroughs: `postman/**` and `postman/WORKFLOW-GUIDE.md`.

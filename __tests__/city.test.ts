@@ -15,8 +15,14 @@ describe('City CRUD API', () => {
     dataSource = await AppDataSource.initialize();
     app = createApp(dataSource);
 
-    // Clear cities table
-    await dataSource.getRepository(City).delete({});
+    // Clear cities table (TypeORM 0.3+ doesn't allow empty criteria in delete)
+    await dataSource
+      .getRepository(City)
+      .createQueryBuilder()
+      .delete()
+      .from(City)
+      .where('1=1')
+      .execute();
   });
 
   afterAll(async () => {

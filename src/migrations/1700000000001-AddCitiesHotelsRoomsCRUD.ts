@@ -60,6 +60,9 @@ export class AddCitiesHotelsRoomsCRUD1700000000001 {
     await queryRunner.query(`UPDATE "rooms" SET "roomType" = 'suite' WHERE "roomType" IS NULL AND "room_type" ILIKE '%suite%'`);
     await queryRunner.query(`UPDATE "rooms" SET "roomType" = 'single' WHERE "roomType" IS NULL`);
     
+    // Drop default to avoid cast error during type change
+    await queryRunner.query(`ALTER TABLE "rooms" ALTER COLUMN "status" DROP DEFAULT`);
+
     // Migrate room status to new enum values
     await queryRunner.query(`ALTER TABLE "rooms" ALTER COLUMN "status" TYPE "room_status_new_enum" USING (
       CASE 
@@ -87,6 +90,9 @@ export class AddCitiesHotelsRoomsCRUD1700000000001 {
     // Drop old room_status_enum and rename new one
     await queryRunner.query(`DROP TYPE "room_status_enum"`);
     await queryRunner.query(`ALTER TYPE "room_status_new_enum" RENAME TO "room_status_enum"`);
+
+    // Restore default on status to the new enum
+    await queryRunner.query(`ALTER TABLE "rooms" ALTER COLUMN "status" SET DEFAULT 'Available'::room_status_enum`);
   }
 
   public async down(queryRunner: any): Promise<void> {
