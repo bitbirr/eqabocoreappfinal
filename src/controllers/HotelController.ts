@@ -3,16 +3,336 @@ import { DataSource, Repository, Between, Not, In } from 'typeorm';
 import { Hotel, HotelStatus } from '../models/Hotel';
 import { Room, RoomStatus } from '../models/Room';
 import { Booking, BookingStatus } from '../models/Booking';
+import { HotelService } from '../services/HotelService';
+import { RoomService } from '../services/RoomService';
 
 export class HotelController {
   private hotelRepository: Repository<Hotel>;
   private roomRepository: Repository<Room>;
   private bookingRepository: Repository<Booking>;
+  private hotelService: HotelService;
+  private roomService: RoomService;
 
   constructor(dataSource: DataSource) {
     this.hotelRepository = dataSource.getRepository(Hotel);
     this.roomRepository = dataSource.getRepository(Room);
     this.bookingRepository = dataSource.getRepository(Booking);
+    this.hotelService = new HotelService(dataSource);
+    this.roomService = new RoomService(dataSource);
+  }
+
+  /**
+   * Create a new hotel
+   * POST /api/v1/cities/:cityId/hotels
+   */
+  async createHotel(req: Request, res: Response): Promise<void> {
+    try {
+      const cityId = parseInt(req.params.cityId);
+      const { hotelName, address } = req.body;
+
+      if (isNaN(cityId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid city ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Creating hotel in city ${cityId}: ${hotelName}`);
+
+      const hotel = await this.hotelService.createHotel(cityId, hotelName, address);
+
+      console.log(`[${new Date().toISOString()}] Hotel created successfully: ID ${hotel.hotelId}`);
+
+      res.status(201).json({
+        success: true,
+        data: hotel,
+        message: 'Hotel created successfully'
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error creating hotel:`, error);
+
+      if (error.message === 'City not found' || error.message === 'City is not active') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      if (error.message.includes('required') || error.message.includes('must not exceed')) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create hotel',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Get all hotels for a city
+   * GET /api/v1/cities/:cityId/hotels
+   */
+  async getHotelsByCity(req: Request, res: Response): Promise<void> {
+    try {
+      const cityId = parseInt(req.params.cityId);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      if (isNaN(cityId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid city ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Fetching hotels for city ${cityId}: page=${page}, limit=${limit}`);
+
+      const result = await this.hotelService.getHotelsByCity(cityId, page, limit);
+
+      res.status(200).json({
+        success: true,
+        data: result.hotels,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / result.limit)
+        }
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error fetching hotels:`, error);
+
+      if (error.message === 'City not found') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch hotels',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Get hotel by ID
+   * GET /api/v1/hotels/:hotelId
+   */
+  async getHotelById(req: Request, res: Response): Promise<void> {
+    try {
+      const hotelId = parseInt(req.params.hotelId);
+
+      if (isNaN(hotelId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid hotel ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Fetching hotel: ID ${hotelId}`);
+
+      const hotel = await this.hotelService.getHotelById(hotelId);
+
+      if (!hotel) {
+        res.status(404).json({
+          success: false,
+          message: 'Hotel not found',
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: hotel
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error fetching hotel:`, error);
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch hotel',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Update hotel
+   * PUT /api/v1/hotels/:hotelId
+   */
+  async updateHotel(req: Request, res: Response): Promise<void> {
+    try {
+      const hotelId = parseInt(req.params.hotelId);
+      const updates = req.body;
+
+      if (isNaN(hotelId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid hotel ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Updating hotel: ID ${hotelId}`, updates);
+
+      const hotel = await this.hotelService.updateHotel(hotelId, updates);
+
+      console.log(`[${new Date().toISOString()}] Hotel updated successfully: ID ${hotelId}`);
+
+      res.status(200).json({
+        success: true,
+        data: hotel,
+        message: 'Hotel updated successfully'
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error updating hotel:`, error);
+
+      if (error.message === 'Hotel not found') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      if (error.message.includes('must not exceed')) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update hotel',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Delete hotel (soft delete)
+   * DELETE /api/v1/hotels/:hotelId
+   */
+  async deleteHotel(req: Request, res: Response): Promise<void> {
+    try {
+      const hotelId = parseInt(req.params.hotelId);
+
+      if (isNaN(hotelId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid hotel ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Deleting hotel: ID ${hotelId}`);
+
+      await this.hotelService.deleteHotel(hotelId);
+
+      console.log(`[${new Date().toISOString()}] Hotel deleted successfully: ID ${hotelId}`);
+
+      res.status(204).send();
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error deleting hotel:`, error);
+
+      if (error.message === 'Hotel not found') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      if (error.message.includes('Cannot delete hotel')) {
+        res.status(409).json({
+          success: false,
+          message: error.message,
+          error: 'CONFLICT'
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete hotel',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
+  }
+
+  /**
+   * Get hotel room status summary
+   * GET /api/v1/hotels/:hotelId/room-status
+   */
+  async getHotelRoomStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const hotelId = parseInt(req.params.hotelId);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      if (isNaN(hotelId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid hotel ID',
+          error: 'BAD_REQUEST'
+        });
+        return;
+      }
+
+      console.log(`[${new Date().toISOString()}] Fetching room status for hotel ${hotelId}`);
+
+      const result = await this.roomService.getHotelRoomStatus(hotelId, page, limit);
+
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error: any) {
+      console.error(`[${new Date().toISOString()}] Error fetching room status:`, error);
+
+      if (error.message === 'Hotel not found') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+          error: 'NOT_FOUND'
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch room status',
+        error: 'INTERNAL_SERVER_ERROR'
+      });
+    }
   }
 
   /**
