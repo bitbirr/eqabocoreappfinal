@@ -6,6 +6,8 @@ import { createUserRoutes } from './userRoutes';
 import { createHotelRoutes } from './hotelRoutes';
 import { createBookingRoutes } from './bookingRoutes';
 import { createPaymentRoutes } from './paymentRoutes';
+import { createCityRoutes } from './cityRoutes';
+import { createRoomRoutes } from './roomRoutes';
 
 /**
  * Main router that combines all application routes
@@ -19,10 +21,22 @@ export function createMainRouter(userRepository: Repository<User>, dataSource: D
   // User routes
   router.use('/users', createUserRoutes(userRepository));
 
-  // Hotel booking workflow routes
+  // Hotel booking workflow routes (legacy endpoints)
   router.use('/hotels', createHotelRoutes(dataSource));
   router.use('/bookings', createBookingRoutes(dataSource));
   router.use('/payments', createPaymentRoutes(dataSource));
+
+  // New v1 API routes for City-Hotel-Room CRUD
+  const v1Router = Router();
+  const cityRoutes = createCityRoutes(dataSource);
+  const hotelRoutes = createHotelRoutes(dataSource);
+  const roomRoutes = createRoomRoutes(dataSource);
+
+  v1Router.use('/cities', cityRoutes);
+  v1Router.use('/', hotelRoutes); // Hotel routes include /cities/:cityId/hotels and /hotels/:hotelId
+  v1Router.use('/', roomRoutes);  // Room routes include /hotels/:hotelId/rooms and /rooms/:roomId
+
+  router.use('/v1', v1Router);
 
   // Health check endpoint
   router.get('/health', (req, res) => {

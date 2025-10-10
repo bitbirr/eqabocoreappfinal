@@ -92,6 +92,241 @@ export function createHotelRoutes(dataSource: DataSource): Router {
 
   /**
    * @swagger
+   * /api/v1/cities/{cityId}/hotels:
+   *   post:
+   *     summary: Create a new hotel
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: cityId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: City ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - hotelName
+   *               - address
+   *             properties:
+   *               hotelName:
+   *                 type: string
+   *                 maxLength: 100
+   *                 example: "Grand Palace Hotel"
+   *               address:
+   *                 type: string
+   *                 maxLength: 255
+   *                 example: "Bole Road, Addis Ababa"
+   *     responses:
+   *       201:
+   *         description: Hotel created successfully
+   *       400:
+   *         description: Invalid input
+   *       404:
+   *         description: City not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/cities/:cityId/hotels', (req, res) => hotelController.createHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/v1/cities/{cityId}/hotels:
+   *   get:
+   *     summary: Get all hotels for a city
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: cityId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: City ID
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: Hotels retrieved successfully
+   *       404:
+   *         description: City not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/cities/:cityId/hotels', (req, res) => hotelController.getHotelsByCity(req, res));
+
+  /**
+   * @swagger
+   * /api/v1/hotels/{hotelId}:
+   *   get:
+   *     summary: Get hotel by ID
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: hotelId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Hotel ID
+   *     responses:
+   *       200:
+   *         description: Hotel retrieved successfully
+   *       404:
+   *         description: Hotel not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/hotels/:hotelId', (req, res) => hotelController.getHotelById(req, res));
+
+  /**
+   * @swagger
+   * /api/v1/hotels/{hotelId}:
+   *   put:
+   *     summary: Update hotel
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: hotelId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Hotel ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               hotelName:
+   *                 type: string
+   *                 maxLength: 100
+   *               address:
+   *                 type: string
+   *                 maxLength: 255
+   *               status:
+   *                 type: string
+   *                 enum: [active, inactive, suspended, disabled]
+   *     responses:
+   *       200:
+   *         description: Hotel updated successfully
+   *       400:
+   *         description: Invalid input
+   *       404:
+   *         description: Hotel not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.put('/hotels/:hotelId', (req, res) => hotelController.updateHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/v1/hotels/{hotelId}:
+   *   delete:
+   *     summary: Delete hotel (soft delete)
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: hotelId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Hotel ID
+   *     responses:
+   *       204:
+   *         description: Hotel deleted successfully
+   *       404:
+   *         description: Hotel not found
+   *       409:
+   *         description: Cannot delete hotel with reserved rooms
+   *       500:
+   *         description: Internal server error
+   */
+  router.delete('/hotels/:hotelId', (req, res) => hotelController.deleteHotel(req, res));
+
+  /**
+   * @swagger
+   * /api/v1/hotels/{hotelId}/room-status:
+   *   get:
+   *     summary: Get room status summary for a hotel
+   *     tags: [Hotels]
+   *     parameters:
+   *       - in: path
+   *         name: hotelId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Hotel ID
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: Room status retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalRooms:
+   *                       type: integer
+   *                       example: 50
+   *                     available:
+   *                       type: integer
+   *                       example: 30
+   *                     reserved:
+   *                       type: integer
+   *                       example: 20
+   *                     rooms:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           roomId:
+   *                             type: integer
+   *                           roomNumber:
+   *                             type: string
+   *                           status:
+   *                             type: string
+   *       404:
+   *         description: Hotel not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/hotels/:hotelId/room-status', (req, res) => hotelController.getHotelRoomStatus(req, res));
+
+  /**
+   * @swagger
    * /api/hotels/featured:
    *   get:
    *     summary: Get featured hotels
