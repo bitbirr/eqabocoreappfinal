@@ -358,6 +358,7 @@ export class HotelController {
 
       // Add room count and price range for each hotel
       const featuredHotels = hotels.map(hotel => ({
+        hotelId: hotel.hotelId,
         id: hotel.id,
         name: hotel.name,
         location: hotel.location,
