@@ -16,6 +16,14 @@ const DB_PASS = process.env.DB_PASS || process.env.DB_PASSWORD || 'password';
 const DB_SSL = (process.env.DB_SSL || process.env.PGSSLMODE || '').toLowerCase();
 const useSSL = ['1', 'true', 'require'].includes(DB_SSL) || process.env.NODE_ENV === 'production';
 
+// Detect whether we're running compiled JS (dist) or TS (ts-node)
+const runningTs = __filename.endsWith('.ts');
+
+const interpretTruthy = (value: string | undefined) => {
+  if (!value) return false;
+  return ['1', 'true', 'yes', 'require'].includes(value.toLowerCase());
+};
+
 const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -24,9 +32,11 @@ const dataSource = new DataSource({
   password: DB_PASS,
   database: process.env.DB_NAME || 'eqabo_hotel_booking',
   entities: entities,
-  migrations: process.env.NODE_ENV === 'production' ? ['dist/migrations/*.js'] : ['src/migrations/*.ts'],
+  // Use JS migrations when running compiled code, TS migrations when using ts-node
+  migrations: runningTs ? ['src/migrations/*.ts'] : ['dist/migrations/*.js'],
   migrationsTableName: 'migrations',
-  synchronize: process.env.NODE_ENV === 'development', // Only in development
+  // Avoid destructive schema sync; prefer migrations. Enable only if TYPEORM_SYNC=true is explicitly set.
+  synchronize: interpretTruthy(process.env.TYPEORM_SYNC),
   logging: process.env.NODE_ENV === 'development',
   ssl: useSSL ? { rejectUnauthorized: false } : false
 });

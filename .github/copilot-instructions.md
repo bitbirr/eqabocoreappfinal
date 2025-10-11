@@ -1,43 +1,43 @@
 # Eqabo Copilot Instructions
 
-## Quick orientation
-- Express 5 + TypeScript API authenticated by JWT; runtime persistence is PostgreSQL via TypeORM (`src/app.ts`, `src/server.ts`, `src/models/**`).
-- Route factories create controllers and receive a shared TypeORM `DataSource`/repositories (see `src/routes/index.ts`, `src/controllers/**`). Keep DI: resolve repos from the passed `dataSource`, not from a global.
-- Swagger JSDoc lives in route files (e.g., `src/routes/authRoutes.ts`); Swagger UI is served at `/api-docs` (config in `src/config/swagger.ts`).
+Quick orientation (what matters to code fast here)
+- Express 5 + TypeScript API with JWT auth; PostgreSQL via TypeORM. App bootstrap in `src/app.ts`, server/lifecycle in `src/server.ts`.
+- DI everywhere: route factories receive a TypeORM `DataSource` and/or a `Repository<User>`. Controllers resolve repos from the passed `dataSource` (see `BookingController`, `PaymentController`). Don’t import a global DataSource.
+- Routes are composed in `src/routes/index.ts` with base `/api` and v1 CRUD under `/api/v1`. Auth routes get a `userRepository`; most others get `dataSource`.
+- Swagger JSDoc lives beside routes (e.g., `src/routes/authRoutes.ts`, `cityRoutes.ts`, `roomRoutes.ts`); Swagger UI served at `/api-docs` (config in `src/config/swagger.ts`).
 
-## Local dev workflow
-- Setup: `npm install`, copy `.env.example` to `.env.dev`. Run dev with `npm run dev` (ts-node) or build+start with `npm run build` then `npm start`.
-- Migrations (TypeORM CLI): `npm run migration:run` (uses `ormconfig.ts`). Run before tests/seed.
-- Seeding options: `npm run seed` (JS raw SQL) or `ts-node src/seeds/seed.ts [all|users|hotels|cities|summary]` (uses `session_replication_role` and summarises counts). Both load `.env.dev`.
-- Tests: Jest + Supertest under `__tests__/`. They boot a real `AppDataSource`; ensure DB is up and migrations applied. Useful scripts: `npm test`, `npm test:watch`, smoke tests via Postman `npm run test:smoke` (runs `scripts/run-newman.ps1`).
+Local dev workflow
+- Install deps, copy `.env.example` → `.env.dev`, then: dev `npm run dev`; prod `npm run build && npm start`.
+- Migrations: `npm run migration:run` (uses `ormconfig.ts`). Entities must be exported from `src/models/index.ts`; migrations live in `src/migrations/`.
+- Seed: `npm run seed` (JS) or `ts-node src/seeds/seed.ts [all|users|hotels|cities|summary]`.
+- Tests: Jest + Supertest in `__tests__/` require a real DB; ensure migrations ran. Smoke tests via `npm run test:smoke` (runs `scripts/run-newman.ps1`).
 
-## Persistence and config
-- Active ORM: TypeORM. Entities are exported from `src/models/index.ts`; add new entities there so the runtime and CLI pick them up. Migrations live in `src/migrations/`.
-- Drizzle schema exists (`src/db/**`, `drizzle.config.ts`, `drizzle/`) for future/ops use but is not wired into request handling. Don’t mix unless you explicitly add adapters.
-- Env variable nuances: server normalizes both naming schemes. Set both to be safe:
-	- `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASS` (used by `src/config/database.ts` and seeders)
-	- Or `DB_USERNAME/DB_PASSWORD` (also accepted by `src/server.ts`)
-	- SSL: `DB_SSL`/`PGSSLMODE` truthy enables `ssl: { rejectUnauthorized: false }`.
-- Note defaults differ: `server.ts` default DB=`eqabo_hotel_booking`, `config/database.ts` default DB=`eqabobackend`. Provide `DB_NAME` to avoid surprises.
+Persistence and env gotchas
+- Active ORM is TypeORM. A Drizzle schema exists (`src/db/**`, `drizzle.config.ts`, `drizzle/`) but is not wired into request handling—don’t mix unless you add adapters.
+- Env name normalization: server accepts `DB_USER/DB_PASS` or `DB_USERNAME/DB_PASSWORD`; SSL via `DB_SSL`/`PGSSLMODE` truthy → `ssl: { rejectUnauthorized: false }`.
+- Defaults differ: `server.ts` DB=`eqabo_hotel_booking`; `config/database.ts` DB=`eqabobackend`. Always set `DB_NAME` to avoid surprises.
 
-## Domain rules and patterns
-- Phone numbers must be normalized to `+251XXXXXXXXX` using `validateEthiopianPhone` (`src/utils/phoneValidation.ts`). Example: `const {normalizedPhone} = validateEthiopianPhone(input).` Auth and dedup rely on this.
-- Roles: `admin`, `hotel_owner`, `customer`. Registration allows admin/hotel_owner; guest bookings auto-provision `customer` with stubbed password.
-- Transactions: booking creation and payments use manual `QueryRunner` transactions (see `BookingController.createBooking`, `PaymentController`). Lock room to OCCUPIED on booking; CONFIRMED on payment success; release to AVAILABLE on failure.
-- Audit trail: write a `PaymentLog` row for every significant action (`payment_logs`), e.g., `PAYMENT_INITIATED`, `PAYMENT_SUCCESS`, `PAYMENT_FAILED`, `BOOKING_CREATED`.
-- Firebase (optional): `FirebaseService` supports custom tokens and FCM; guarded when envs missing. Endpoints: `/api/auth/firebase`, `/api/users/fcm-token`.
+Domain conventions you must follow
+- Ethiopian phone normalization: use `validateEthiopianPhone` (`src/utils/phoneValidation.ts`) and store as `+251XXXXXXXXX`. Auth and dedup depend on this.
+- Roles: `admin`, `hotel_owner`, `customer`. Registration allows admin/hotel_owner; guest bookings auto-provision `customer` with stub password.
+- Transactions and audit: use manual `QueryRunner` for bookings/payments. Lock room → `OCCUPIED` on booking; on payment success set booking `CONFIRMED`; on failure set booking `CANCELLED` and room `AVAILABLE`. Log every step in `PaymentLog` (`PAYMENT_INITIATED|SUCCESS|FAILED|BOOKING_CREATED|PAYMENT_MISMATCH`).
+- Firebase is optional and guarded (`FirebaseService`); endpoints: `/api/auth/firebase`, `/api/users/fcm-token`. Tests tolerate missing config.
 
-## API surface
-- Base router mounted at `/api` (`src/routes/index.ts`). Legacy workflow: `/auth`, `/users`, `/hotels`, `/bookings`, `/payments`.
-- New CRUD v1 surface under `/api/v1`: `/cities`, `/cities/:cityId/hotels`, `/hotels/:hotelId/rooms`, as well as `/hotels/:hotelId` and `/rooms/:roomId` resources.
-- Health: `GET /api/health` (keep lightweight). Docs: `/api-docs` for Swagger UI; `GET /api/docs` returns an overview JSON.
+API surface (where things are)
+- Legacy workflow under `/api`: `/auth`, `/users`, `/hotels`, `/bookings`, `/payments`. v1 CRUD under `/api/v1`: `/cities`, `/cities/:cityId/hotels`, `/hotels/:hotelId/rooms`, `/rooms/:roomId`.
+- Health: `GET /api/health`. Docs: `/api-docs`. JSON overview: `GET /api/docs`.
 
-## How to add features (concrete pattern)
-- Create a route factory `createXRoutes(dataSource)` in `src/routes/` with Swagger JSDoc. Register it in `src/routes/index.ts` under `/api` or `/api/v1`.
-- In controllers, obtain repos via `dataSource.getRepository(Entity)` from the DI’d instance. Log state changes to `payment_logs` when touching payments/booking status.
-- Update enums or entities in `src/models/**` and export via `src/models/index.ts`; generate a migration (`npm run migration:generate`). Keep JSDoc schemas in sync.
+How to add a feature (copy this pattern)
+- Add `createXRoutes(dataSource)` in `src/routes/` with Swagger JSDoc; register it in `src/routes/index.ts` under `/api` or `/api/v1`.
+- Implement a controller that gets repos via `dataSource.getRepository(Entity)`. If touching bookings/payments, emit `PaymentLog` and respect room/booking status rules above.
+- Update or add entities/enums in `src/models/**`, export via `src/models/index.ts`, then generate/run a migration.
 
-## References
-- Onboarding and DB: `DATABASE_SETUP.md`, `docs/DEVELOPER_GUIDE.md`.
-- Seeding details and volumes: `SEEDING_GUIDE.md`, seeders in `src/seeds/**` and `scripts/seed.js`.
-- API walkthroughs: `postman/**` and `postman/WORKFLOW-GUIDE.md`.
+Concrete examples in repo
+- See `BookingController.createBooking` for QueryRunner usage, conflict checks, room locking, and Firestore/FCM side-effects.
+- See `PaymentController.handlePaymentCallback` for success/failure flows, status updates, and audit logging.
+- See `authMiddleware.ts` for JWT middleware, role guards, rate limiting; `authRoutes.ts` for Swagger patterns and DI.
+
+References
+- Onboarding/DB: `DATABASE_SETUP.md`, `docs/DEVELOPER_GUIDE.md`.
+- Seeding: `SEEDING_GUIDE.md`, `src/seeds/**`, `scripts/seed.js`.
+- API walkthroughs: `postman/**`, `postman/WORKFLOW-GUIDE.md`.
