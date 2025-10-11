@@ -338,4 +338,40 @@ describe('Hotel CRUD API', () => {
       expect(response.body.message).toContain('reserved room');
     });
   });
+
+  describe('GET /api/hotels/featured', () => {
+    it('should retrieve featured hotels with both hotelId and id', async () => {
+      const response = await request(app)
+        .get('/api/hotels/featured')
+        .query({ limit: 10 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('hotels');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data.hotels).toBeInstanceOf(Array);
+      
+      // Verify that hotels have both hotelId (integer) and id (UUID)
+      if (response.body.data.hotels.length > 0) {
+        const hotel = response.body.data.hotels[0];
+        expect(hotel).toHaveProperty('hotelId');
+        expect(hotel).toHaveProperty('id');
+        expect(typeof hotel.hotelId).toBe('number');
+        expect(typeof hotel.id).toBe('string');
+        expect(hotel).toHaveProperty('name');
+        expect(hotel).toHaveProperty('location');
+        expect(hotel).toHaveProperty('room_count');
+      }
+    });
+
+    it('should respect the limit parameter', async () => {
+      const response = await request(app)
+        .get('/api/hotels/featured')
+        .query({ limit: 5 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.hotels.length).toBeLessThanOrEqual(5);
+    });
+  });
 });
