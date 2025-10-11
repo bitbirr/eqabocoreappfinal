@@ -1,0 +1,309 @@
+{
+  "info": {
+    "_postman_id": "5c6e9c98-2c9d-4c23-a4a3-3df7a2f0c001",
+    "name": "Eqabo Complete API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Complete, up-to-date collection for Eqabo Hotel Booking API. Includes all endpoints, sample requests, and example responses. Uses {{baseUrl}} and {{jwtToken}} variables."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "jwtToken", "value": "", "type": "string" },
+    { "key": "cityId", "value": "1", "type": "string" },
+    { "key": "hotelId", "value": "1", "type": "string" },
+    { "key": "roomId", "value": "1", "type": "string" },
+    { "key": "bookingId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health & Docs",
+      "item": [
+        {
+          "name": "GET / (root)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "200 OK example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Welcome to Eqabo Hotel Booking API\",\n  \"version\": \"1.0.0\",\n  \"documentation\": \"/api-docs\",\n  \"health\": \"/api/health\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/health",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "200 OK example",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"message\": \"API is healthy\",\n  \"timestamp\": \"2025-10-11T10:00:00.000Z\",\n  \"version\": \"1.0.0\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/docs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/docs" },
+          "response": []
+        },
+        {
+          "name": "GET /api-docs (Swagger UI)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api-docs" },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "POST /api/auth/register",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Yohannes\",\n  \"last_name\": \"Bekele\",\n  \"phone\": \"+251927802065\",\n  \"password\": \"SecurePass123\",\n  \"role\": \"hotel_owner\"\n}"
+            },
+            "description": "Register a new user. Roles allowed: admin | hotel_owner. Phone must normalize to +251XXXXXXXXX."
+          },
+          "response": [
+            {
+              "name": "201 Created example",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\",\n  \"data\": {\n    \"token\": \"<jwt>\",\n    \"user\": {\n      \"id\": \"uuid\",\n      \"first_name\": \"Yohannes\",\n      \"last_name\": \"Bekele\",\n      \"phone\": \"+251927802065\",\n      \"role\": \"hotel_owner\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) { pm.collectionVariables.set('jwtToken', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+251927802065\",\n  \"password\": \"SecurePass123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/auth/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwtToken}}" }],
+            "url": "{{baseUrl}}/api/auth/me"
+          },
+          "response": []
+        },
+        { "name": "POST /api/auth/refresh", "request": { "method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/refresh" } },
+        { "name": "POST /api/auth/logout", "request": { "method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/logout" } },
+        { "name": "GET /api/auth/validate", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/validate" } },
+        { "name": "GET /api/auth/admin-only", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/admin-only" } },
+        { "name": "GET /api/auth/hotel-owner-only", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/hotel-owner-only" } },
+        { "name": "POST /api/auth/firebase", "request": { "method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{jwtToken}}"}], "url": "{{baseUrl}}/api/auth/firebase" } }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "POST /api/users/fcm-token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwtToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": "{{baseUrl}}/api/users/fcm-token",
+            "body": { "mode": "raw", "raw": "{\n  \"fcmToken\": \"fGxK7nHqRY6...\"\n}" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cities (v1)",
+      "item": [
+        {
+          "name": "POST /api/v1/cities",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/v1/cities",
+            "body": { "mode": "raw", "raw": "{\n  \"cityName\": \"Addis Ababa\",\n  \"gps\": \"9.0320,38.7469\"\n}" }
+          },
+          "response": []
+        },
+        { "name": "GET /api/v1/cities", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cities?page=1&limit=20" } },
+        { "name": "GET /api/v1/cities/:cityId", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cities/{{cityId}}" } },
+        { "name": "PUT /api/v1/cities/:cityId", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "url": "{{baseUrl}}/api/v1/cities/{{cityId}}", "body": { "mode": "raw", "raw": "{\n  \"cityName\": \"Addis\",\n  \"status\": \"active\"\n}" } } },
+        { "name": "DELETE /api/v1/cities/:cityId", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/cities/{{cityId}}" } }
+      ]
+    },
+    {
+      "name": "Hotels (v1 + legacy)",
+      "item": [
+        {
+          "name": "POST /api/v1/cities/:cityId/hotels",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/v1/cities/{{cityId}}/hotels",
+            "body": { "mode": "raw", "raw": "{\n  \"hotelName\": \"Grand Palace Hotel\",\n  \"address\": \"Bole Road, Addis Ababa\"\n}" }
+          },
+          "response": []
+        },
+        { "name": "GET /api/v1/cities/:cityId/hotels", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cities/{{cityId}}/hotels?page=1&limit=20" } },
+        { "name": "GET /api/v1/hotels/:hotelId", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}" } },
+        { "name": "PUT /api/v1/hotels/:hotelId", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}", "body": { "mode": "raw", "raw": "{\n  \"hotelName\": \"Skylight\",\n  \"status\": \"active\"\n}" } } },
+        { "name": "DELETE /api/v1/hotels/:hotelId", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}" } },
+        { "name": "GET /api/v1/hotels/:hotelId/room-status", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}/room-status?page=1&limit=20" } },
+        { "name": "GET /api/hotels/featured", "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels/featured?limit=10" } }
+      ]
+    },
+    {
+      "name": "Rooms (v1)",
+      "item": [
+        {
+          "name": "POST /api/v1/hotels/:hotelId/rooms",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}/rooms",
+            "body": { "mode": "raw", "raw": "{\n  \"roomNumber\": \"101\",\n  \"roomType\": \"double\",\n  \"price\": 1500.00\n}" }
+          },
+          "response": []
+        },
+        { "name": "GET /api/v1/hotels/:hotelId/rooms", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/hotels/{{hotelId}}/rooms?page=1&limit=20&status=Available" } },
+        { "name": "GET /api/v1/rooms/:roomId", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}" } },
+        { "name": "PUT /api/v1/rooms/:roomId", "request": { "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}", "body": { "mode": "raw", "raw": "{\n  \"roomNumber\": \"101\",\n  \"roomType\": \"double\",\n  \"price\": 1800.00,\n  \"status\": \"Available\"\n}" } } },
+        { "name": "DELETE /api/v1/rooms/:roomId", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}" } }
+      ]
+    },
+    {
+      "name": "Bookings (legacy /api)",
+      "item": [
+        {
+          "name": "POST /api/bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.booking) { pm.collectionVariables.set('bookingId', json.data.booking.id); }",
+                  "if (json && json.data && json.data.payment) { pm.collectionVariables.set('paymentId', json.data.payment.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": "{{baseUrl}}/api/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"John Doe\",\n  \"phone\": \"+251911223344\",\n  \"hotelId\": \"{{hotelId}}\",\n  \"roomId\": \"{{roomId}}\",\n  \"checkIn\": \"2025-10-15\",\n  \"checkOut\": \"2025-10-17\"\n}"
+            },
+            "description": "BookingController expects userName, phone, hotelId, roomId, checkIn (YYYY-MM-DD), checkOut."
+          },
+          "response": [
+            {
+              "name": "201 Created example",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Booking created successfully. Room is temporarily locked pending payment.\",\n  \"data\": {\n    \"booking\": {\n      \"id\": \"uuid\",\n      \"user\": { \"name\": \"John Doe\", \"phone\": \"+251911223344\" },\n      \"hotel\": { \"id\": \"{{hotelId}}\", \"name\": \"Skylight\", \"location\": \"Addis Ababa\" },\n      \"room\": { \"id\": \"{{roomId}}\", \"room_number\": \"101\", \"room_type\": \"double\", \"price_per_night\": 1500 },\n      \"checkin_date\": \"2025-10-15\",\n      \"checkout_date\": \"2025-10-17\",\n      \"nights\": 2,\n      \"total_amount\": 3000,\n      \"status\": \"pending\"\n    },\n    \"payment\": { \"id\": \"uuid\", \"amount\": 3000, \"status\": \"pending\" },\n    \"next_step\": { \"action\": \"initiate_payment\", \"endpoint\": \"/api/payments/initiate\" }\n  }\n}"
+            }
+          ]
+        },
+        { "name": "GET /api/bookings/:id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/bookings/{{bookingId}}" },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments (legacy /api)",
+      "item": [
+        {
+          "name": "POST /api/payments/initiate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.payment) { pm.collectionVariables.set('paymentId', json.data.payment.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ {"key": "Content-Type", "value": "application/json"} ],
+            "url": "{{baseUrl}}/api/payments/initiate",
+            "body": { "mode": "raw", "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"provider\": \"telebirr\"\n}" },
+            "description": "Use provider: telebirr | chappa | ebirr | kaafi."
+          },
+          "response": [
+            {
+              "name": "200 OK example",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully\",\n  \"data\": {\n    \"payment\": {\n      \"id\": \"uuid\",\n      \"booking_id\": \"{{bookingId}}\",\n      \"amount\": 3000,\n      \"provider\": \"telebirr\",\n      \"provider_reference\": \"TELEBIRR_1728650000000_abcd123\",\n      \"status\": \"pending\"\n    },\n    \"payment_instructions\": {\n      \"provider\": \"telebirr\",\n      \"reference\": \"TELEBIRR_...\",\n      \"amount\": 3000,\n      \"callback_url\": \"/api/payments/callback\",\n      \"payment_url\": \"https://mock-telebirr.com/pay?ref=...\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/payments/callback",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/api/payments/callback",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider_reference\": \"TELEBIRR_1728650000000_abcd123\",\n  \"status\": \"success\",\n  \"amount\": 3000\n}"
+            }
+          },
+          "response": []
+        },
+        { "name": "GET /api/payments/:id", "request": { "method": "GET", "url": "{{baseUrl}}/api/payments/{{paymentId}}" }, "response": [] }
+      ]
+    }
+  ]
+}
